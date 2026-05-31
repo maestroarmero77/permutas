@@ -2897,7 +2897,7 @@ function renderCards(lista) {
   grid.innerHTML = lista.map(p => {
     const busca = p.busca_concellos.slice(0,2).join(', ') + (p.busca_concellos.length > 2 ? ` +${p.busca_concellos.length-2}` : '');
     return `
-    <div class="tarxeta-permuta" onclick="abrirModal(${p.id})">
+    <div class="tarxeta-permuta" onclick="abrirModal('${p.id}')">
       <div class="tp-cabeceira">
         <div class="tp-docente">
           <div class="tp-avatar" style="background:${p.cor}">${p.iniciais}</div>
@@ -2924,7 +2924,7 @@ function renderCards(lista) {
       ${p.obs ? `<div class="tp-obs">${p.obs.substring(0,95)}${p.obs.length>95?'…':''}</div>` : ''}
       <div class="tp-pe">
         <span class="tp-data">${p._cloud ? '<span class="tp-cloud-dot"></span>' : ''}Publicado ${p.fecha}</span>
-        <button class="btn-contactar" onclick="event.stopPropagation();abrirModal(${p.id})">Contactar</button>
+        <button class="btn-contactar" onclick="event.stopPropagation();abrirModal('${p.id}')">Contactar</button>
       </div>
     </div>`;
   }).join('');
@@ -2934,7 +2934,7 @@ function renderCards(lista) {
 // MODAL
 // =============================================
 function abrirModal(id) {
-  const p = permutas.find(x => x.id === id);
+  const p = permutas.find(x => String(x.id) === String(id));
   if (!p) return;
   modalActual = p;
 
@@ -3294,6 +3294,35 @@ const CONCELLO_COORDS = {
   "Vilardevós": [41.9167, -7.2833],
   "Xermade": [43.3167, -7.7833],
   "Zas": [43.0667, -8.8333],
+  "Abegondo": [43.2333, -8.2833],
+  "Ares": [43.4333, -8.2333],
+  "Barbanza": [42.65, -8.9],
+  "Brión": [42.8667, -8.6667],
+  "Cartelle": [42.2167, -8.0833],
+  "Cañiza (A)": [42.2167, -8.2667],
+  "Cerceda": [43.15, -8.3833],
+  "Cerdido": [43.5833, -7.95],
+  "Coristanco": [43.1833, -8.75],
+  "Estrada (A)": [42.6833, -8.4833],
+  "Eume": [43.4167, -8.15],
+  "Fene": [43.4667, -8.1667],
+  "Mañón": [43.7167, -7.7167],
+  "Mesía": [43.1167, -8.2833],
+  "Mezquita (A)": [41.9333, -7.2167],
+  "Miño": [43.35, -8.2],
+  "Monfero": [43.3167, -8.0667],
+  "Monterrei": [41.95, -7.45],
+  "Neda": [43.5, -8.1667],
+  "Pobra do Caramiñal (A)": [42.6, -8.9333],
+  "Ribeiro (O)": [42.3, -8.15],
+  "Riotorto": [43.3333, -7.1667],
+  "Rosal (O)": [41.9333, -8.8333],
+  "Sandiás": [42.05, -7.7333],
+  "Sobrado": [43.0333, -8.0167],
+  "Somozas (As)": [43.5833, -7.9833],
+  "Valadouro (O)": [43.5667, -7.4],
+  "Vilaboa": [42.3667, -8.6167],
+  "Vilar de Barrio": [42.0833, -7.6]
 };
 
 // =============================================
@@ -3608,7 +3637,7 @@ function crearPopup(p) {
     <div class="mapa-popup-row"><strong>📍 Ofrece:</strong> ${p.ofrece_concello} (${p.ofrece_prov})</div>
     <div class="mapa-popup-row"><strong>🎯 Busca:</strong> ${busca}</div>
     ${p.obs ? `<div class="mapa-popup-obs">"${p.obs.substring(0,80)}…"</div>` : ''}
-    <button class="mapa-popup-btn" onclick="abrirModal(${typeof p.id === 'number' ? p.id : '"'+p.id+'"'})">Contactar</button>
+    <button class="mapa-popup-btn" onclick="abrirModal('${p.id}')">Contactar</button>
   </div>`;
 }
 
