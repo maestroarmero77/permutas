@@ -3,7 +3,177 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PermuGal · Permutas de Profesores en Galicia</title>
+<title>PermuGal · Permutas de Profesores en Galicia 2025</title>
+<meta name="description" content="Buscador de permutas para docentes de Galicia. Encuentra y publica permutas por especialidad, cuerpo y concello. Primaria, Infantil, Música, Ed. Física, Inglés y más. Algoritmo de permutas a 3.">
+<meta name="keywords" content="permutas profesores galicia, permuta docentes galicia, bolsa permutas maestros galicia, permuta primaria galicia, permuta musica galicia, permuta educacion fisica galicia, permuta ferrol, permuta santiago, permuta vigo, permuta lugo, permuta coruña">
+<meta name="author" content="PermuGal · @maestro.armero">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://permugal.github.io/">
+<!-- Open Graph -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://permugal.github.io/">
+<meta property="og:title" content="PermuGal · Permutas de Profesores en Galicia">
+<meta property="og:description" content="Busca y publica permutas docentes en Galicia. Motor de matching automático, mapa interactivo y algoritmo de permutas a 3. Más de 160 permutas activas.">
+<meta property="og:locale" content="es_ES">
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="PermuGal · Permutas de Profesores en Galicia">
+<meta name="twitter:description" content="Busca y publica permutas docentes en Galicia. Motor de matching automático y más de 160 permutas activas.">
+<!-- Schema.org -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "PermuGal",
+  "description": "Plataforma para facilitar permutas entre docentes de Galicia",
+  "url": "https://permugal.github.io/",
+  "applicationCategory": "EducationApplication",
+  "operatingSystem": "Web",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
+  "author": { "@type": "Person", "name": "@maestro.armero" },
+  "keywords": "permutas profesores galicia, permuta docentes galicia"
+}
+</script>
+
+<!-- Firebase -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
+  import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, query, orderBy, onSnapshot, serverTimestamp }
+    from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyC8ONEf2EJwvHTTuftCaS6Wnwyp5SB-ivc",
+    authDomain: "permutasdocentes-36b8b.firebaseapp.com",
+    projectId: "permutasdocentes-36b8b",
+    storageBucket: "permutasdocentes-36b8b.firebasestorage.app",
+    messagingSenderId: "757819122538",
+    appId: "1:757819122538:web:2a6462830ae7bf94e73b13"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db  = getFirestore(app);
+
+  // ── Exponer funciones al scope global ──────────────────────────────────────
+
+  // GUARDAR permuta nueva en Firestore
+  window.guardarPermutaFirestore = async function(permuta) {
+    try {
+      const docRef = await addDoc(collection(db, "permutas"), {
+        ...permuta,
+        fecha_creacion: serverTimestamp(),
+        activa: true,
+        fuente: "usuario"
+      });
+      console.log("Permuta guardada con ID:", docRef.id);
+      return docRef.id;
+    } catch(e) {
+      console.error("Error guardando permuta:", e);
+      return null;
+    }
+  };
+
+  // CARGAR permutas de Firestore y añadirlas al array local
+  window.cargarPermutasFirestore = async function() {
+    try {
+      mostrarCargando(true);
+      const q = query(collection(db, "permutas"), orderBy("fecha_creacion", "desc"));
+      const snap = await getDocs(q);
+      const nuevas = [];
+      snap.forEach(d => {
+        const data = d.data();
+        if (data.activa === false) return; // omitir inactivas
+        // Evitar duplicados con datos hardcodeados (mismo concello+especialidad+email)
+        const existe = permutas.some(p =>
+          p.email && p.email === data.email &&
+          p.ofrece_concello === data.ofrece_concello &&
+          p.especialidad === data.especialidad
+        );
+        if (!existe) {
+          nuevas.push({
+            ...data,
+            id: 'fb_' + d.id,
+            _firebaseId: d.id,
+            fecha: formatearFecha(data.fecha_creacion),
+            _cloud: true
+          });
+        }
+      });
+
+      if (nuevas.length > 0) {
+        // Insertar al principio del array
+        permutas.unshift(...nuevas);
+        document.getElementById('totalPermutas').textContent = permutas.length;
+        renderCards(permutas);
+        if (typeof filtrarMapa === 'function' && window._mapaIniciado) filtrarMapa();
+      }
+      mostrarCargando(false);
+      mostrarBannerNube(nuevas.length);
+    } catch(e) {
+      console.error("Error cargando permutas:", e);
+      mostrarCargando(false);
+    }
+  };
+
+  // MARCAR permuta como inactiva (cerrada/retirada)
+  window.marcarPermutaInactiva = async function(firebaseId) {
+    try {
+      await updateDoc(doc(db, "permutas", firebaseId), { activa: false });
+      return true;
+    } catch(e) {
+      console.error("Error actualizando permuta:", e);
+      return false;
+    }
+  };
+
+  // Escuchar cambios en tiempo real (nuevas permutas de otros usuarios)
+  window.escucharNuevasPermutas = function() {
+    const q = query(collection(db, "permutas"), orderBy("fecha_creacion", "desc"));
+    onSnapshot(q, snap => {
+      snap.docChanges().forEach(change => {
+        if (change.type === "added") {
+          const data = change.doc.data();
+          if (!data.activa) return;
+          const fbId = 'fb_' + change.doc.id;
+          const yaExiste = permutas.some(p => p.id === fbId);
+          if (!yaExiste) {
+            const nueva = {
+              ...data,
+              id: fbId,
+              _firebaseId: change.doc.id,
+              fecha: "ahora mismo",
+              _cloud: true
+            };
+            permutas.unshift(nueva);
+            document.getElementById('totalPermutas').textContent = permutas.length;
+            mostrarToastNuevaPermuta(nueva);
+            renderCards(permutas);
+          }
+        }
+      });
+    });
+  };
+
+  // Cargar al iniciar
+  window.addEventListener('DOMContentLoaded', () => {
+    window.cargarPermutasFirestore().then(() => {
+      window.escucharNuevasPermutas();
+    });
+  });
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+  function formatearFecha(ts) {
+    if (!ts) return "hace un momento";
+    const d = ts.toDate ? ts.toDate() : new Date(ts);
+    const diff = Math.floor((Date.now() - d.getTime()) / 60000);
+    if (diff < 1) return "hace un momento";
+    if (diff < 60) return `hace ${diff} min`;
+    const h = Math.floor(diff / 60);
+    if (h < 24) return `hace ${h}h`;
+    const days = Math.floor(h / 24);
+    if (days < 7) return `hace ${days} día${days>1?'s':''}`;
+    return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+  }
+</script>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <style>
@@ -97,7 +267,7 @@ body {
 .hero {
   background: var(--azul);
   color: var(--blanco);
-  padding: 0.75rem 1.5rem 0.6rem;
+  padding: 0.35rem 1.5rem 0.3rem;
 }
 
 .hero-inner {
@@ -1324,6 +1494,251 @@ footer a:hover { color: var(--blanco); }
   .modal-priv-cabeceira { padding: 1rem; }
 }
 
+
+/* ── MATCHING AUTOMÁTICO ──────────────────── */
+.match-banner {
+  display: none;
+  background: var(--blanco);
+  border: 2px solid var(--azul);
+  border-left: 6px solid var(--azul);
+  border-radius: 2px;
+  padding: 1.25rem 1.5rem;
+  margin-top: 1.25rem;
+  animation: aparecer 0.4s ease;
+}
+.match-banner.mostrar { display: block; }
+
+.match-banner-titulo {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--azul-oscuro);
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.match-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.match-item {
+  background: var(--azul-10);
+  border-radius: 2px;
+  padding: 0.7rem 1rem;
+  font-size: 0.86rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.match-item-info { line-height: 1.5; }
+.match-score {
+  background: var(--azul);
+  color: white;
+  border-radius: 2px;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.match-score.alto { background: #276749; }
+.match-score.medio { background: var(--azul); }
+.match-score.bajo { background: var(--texto-suave); }
+
+/* ── CONTACTO INTERNO ──────────────────────── */
+.modal-contacto-interno {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,43,74,0.55);
+  z-index: 500;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  backdrop-filter: blur(2px);
+}
+.modal-contacto-interno.mostrar { display: flex; }
+
+.contacto-interno-inner {
+  background: var(--blanco);
+  border-radius: 2px;
+  border-top: 4px solid var(--azul);
+  max-width: 520px;
+  width: 100%;
+  box-shadow: 0 20px 60px rgba(0,43,74,0.25);
+  animation: aparecer 0.2s ease;
+  overflow: hidden;
+}
+
+.ci-cabeceira {
+  padding: 1.1rem 1.5rem;
+  border-bottom: 1px solid var(--borde);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.ci-cabeceira h3 { font-size: 1rem; font-weight: 700; color: var(--azul-oscuro); }
+.ci-cerrar { background: none; border: none; font-size: 1.2rem; cursor: pointer; color: var(--texto-suave); }
+.ci-cerrar:hover { color: var(--azul); }
+
+.ci-permuta-info {
+  background: var(--fondo);
+  padding: 0.85rem 1.5rem;
+  font-size: 0.83rem;
+  line-height: 1.6;
+  border-bottom: 1px solid var(--borde);
+}
+.ci-permuta-info strong { color: var(--azul-oscuro); }
+
+.ci-form { padding: 1.25rem 1.5rem; display: flex; flex-direction: column; gap: 0.85rem; }
+
+.ci-enviado {
+  display: none;
+  padding: 1.5rem;
+  text-align: center;
+}
+.ci-enviado.mostrar { display: block; }
+.ci-enviado .icona { font-size: 2rem; margin-bottom: 0.5rem; }
+.ci-enviado p { font-weight: 700; color: var(--azul-oscuro); font-size: 0.95rem; }
+.ci-enviado small { color: var(--texto-suave); font-size: 0.83rem; }
+
+.ci-sin-email {
+  padding: 1.25rem 1.5rem;
+  text-align: center;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+.ci-sin-email .icona-warn { font-size: 1.8rem; margin-bottom: 0.5rem; }
+
+/* ── SCORE BADGE ───────────────────────────── */
+.score-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.18rem 0.5rem;
+  border-radius: 2px;
+  margin-left: 0.4rem;
+  vertical-align: middle;
+}
+.score-alto { background: #e8f5ee; color: #276749; border: 1px solid #b7dfca; }
+.score-medio { background: var(--azul-10); color: var(--azul); border: 1px solid var(--azul-25); }
+.score-bajo { background: #f5f5f5; color: #777; border: 1px solid #ddd; }
+
+/* ── TIPO BADGE ────────────────────────────── */
+.tipo-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.15rem 0.45rem;
+  border-radius: 2px;
+  border: 1px solid;
+  margin-left: 0.3rem;
+  vertical-align: middle;
+}
+.tipo-def { background: #e8f5ee; color: #276749; border-color: #b7dfca; }
+.tipo-prov { background: #fff8e6; color: #8a6000; border-color: #f0d98a; }
+
+
+/* ── FIREBASE / CLOUD ──────────────────────── */
+.cloud-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--azul);
+  background: var(--azul-10);
+  border: 1px solid var(--azul-25);
+  border-radius: 2px;
+  padding: 0.15rem 0.5rem;
+  margin-left: 0.4rem;
+  vertical-align: middle;
+}
+
+.cargando-overlay {
+  display: none;
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  background: var(--azul);
+  color: white;
+  padding: 0.65rem 1.1rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  z-index: 300;
+  box-shadow: 0 4px 16px rgba(0,43,74,0.3);
+  animation: aparecer 0.2s ease;
+  display: none;
+  align-items: center;
+  gap: 0.5rem;
+}
+.cargando-overlay.mostrar { display: flex; }
+
+.spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255,255,255,0.35);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: girar 0.7s linear infinite;
+}
+@keyframes girar { to { transform: rotate(360deg); } }
+
+.toast-nueva {
+  display: none;
+  position: fixed;
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--azul-oscuro);
+  color: white;
+  padding: 0.8rem 1.5rem;
+  border-radius: 4px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  z-index: 400;
+  box-shadow: 0 4px 20px rgba(0,43,74,0.35);
+  white-space: nowrap;
+  max-width: 90vw;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  cursor: pointer;
+}
+.toast-nueva.mostrar { display: block; animation: aparecer 0.25s ease; }
+
+.banner-nube {
+  display: none;
+  background: var(--azul-10);
+  border: 1px solid var(--azul-25);
+  border-left: 4px solid var(--azul);
+  border-radius: 2px;
+  padding: 0.75rem 1.1rem;
+  margin-bottom: 1rem;
+  font-size: 0.88rem;
+  color: var(--azul-oscuro);
+  align-items: center;
+  gap: 0.6rem;
+}
+.banner-nube.mostrar { display: flex; }
+
+/* Tarjeta de permuta cloud */
+.tp-cloud-dot {
+  width: 7px; height: 7px;
+  background: var(--azul-claro, #0093d6);
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+
 </style>
 </head>
 <body>
@@ -1343,7 +1758,6 @@ footer a:hover { color: var(--blanco); }
   <div class="hero-inner">
     <div>
       <h1>Buscador de <strong>permutas docentes</strong><br>en Galicia</h1>
-      <p class="hero-desc">Conectamos a profesores que quieren intercambiar destino. Busca por cuerpo, especialidad y concello, publica tu oferta y contacta de forma sencilla.</p>
       <p style="margin-top:0.6rem;font-size:0.78rem;opacity:0.6;font-weight:300;letter-spacing:0.3px;">Desarrollado por <strong style="font-weight:600;opacity:1;">@maestro.armero</strong></p>
       <p style="margin-top:0.65rem;font-size:0.82rem;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);border-radius:2px;padding:0.5rem 0.85rem;line-height:1.55;">
         🚧 <strong style="font-weight:700;">Versión en pruebas</strong> — Esta aplicación está en desarrollo activo y mejora continua. Tu experiencia y sugerencias son bienvenidas: escríbenos a <a href="mailto:maestroarmero77@gmail.com" style="color:rgba(255,255,255,0.9);text-decoration:underline;">maestroarmero77@gmail.com</a>
@@ -1351,7 +1765,7 @@ footer a:hover { color: var(--blanco); }
     </div>
     <div class="hero-stats">
       <div class="stat">
-        <span class="stat-num" id="totalPermutas">137</span>
+        <span class="stat-num" id="totalPermutas">161</span>
         <span class="stat-label">Permutas activas</span>
       </div>
       <div class="stat">
@@ -1419,6 +1833,14 @@ footer a:hover { color: var(--blanco); }
           </select>
         </div>
 
+        <div class="campo">
+          <span class="etiqueta">Tipo de permuta</span>
+          <select id="f-tipo">
+            <option value="">Cualquier tipo</option>
+            <option value="Definitiva">Definitiva</option>
+            <option value="Provisional">Provisional</option>
+          </select>
+        </div>
         <div class="filtros-fila-dupla">
           <div class="campo">
             <span class="etiqueta">Provincia que busca</span>
@@ -1666,6 +2088,8 @@ footer a:hover { color: var(--blanco); }
         </div>
       </div>
 
+      <!-- Honeypot anti-spam (oculto) -->
+      <div style="display:none;"><input type="text" id="hp-field" tabindex="-1" autocomplete="off"></div>
       <div class="check-fila">
         <input type="checkbox" id="p-privacidade">
         <label class="check-label" for="p-privacidade">He leído y acepto la <a href="#politica-privacidad" onclick="event.preventDefault();abrirPrivacidad();" style="color:var(--azul);font-weight:600;">Política de Privacidad</a>. Acepto que los datos introducidos sean visibles en el buscador para facilitar la localización de permutas. El correo electrónico solo se mostrará en caso de contacto mutuo.</label>
@@ -1680,34 +2104,61 @@ footer a:hover { color: var(--blanco); }
           <small>Tu oferta ya es visible en el buscador. Recibirás un aviso por correo cuando alguien muestre interés.</small>
         </div>
       </div>
+      <div class="match-banner" id="match-banner">
+        <div class="match-banner-titulo">🎯 ¡Encontramos permutas que podrían encajarte!</div>
+        <div class="match-lista" id="match-lista"></div>
+      </div>
     </div>
   </div>
 
 </main>
 
-<!-- MODAL CONTACTO -->
-<div class="modal-fondo" id="modal-fondo" onclick="cerrarModal(event)">
-  <div class="modal">
-    <h3 id="modal-titulo">Contactar con el docente</h3>
-    <div class="modal-info" id="modal-info"></div>
-    <p class="modal-nota" style="margin-bottom:1rem;">Completa tus datos para que el docente pueda responderte. Se abrirá tu cliente de correo con el mensaje preparado.</p>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1rem;">
-      <div class="campo">
-        <span class="etiqueta">Tu nombre</span>
-        <input type="text" id="contacto-nombre" placeholder="Ana García López">
+<!-- MODAL CONTACTO INTERNO -->
+<div class="modal-contacto-interno" id="modal-contacto-interno" onclick="cerrarContactoInterno(event)">
+  <div class="contacto-interno-inner" id="ci-inner">
+    <div class="ci-cabeceira">
+      <h3 id="ci-titulo">Contactar con el docente</h3>
+      <button class="ci-cerrar" onclick="cerrarContactoInterno()">✕</button>
+    </div>
+    <div class="ci-permuta-info" id="ci-permuta-info"></div>
+    <!-- Formulario -->
+    <div class="ci-form" id="ci-form">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+        <div class="campo">
+          <span class="etiqueta">Tu nombre <span class="etiqueta-sub">(opcional)</span></span>
+          <input type="text" id="ci-nombre" placeholder="O alias">
+        </div>
+        <div class="campo">
+          <span class="etiqueta">Tu correo *</span>
+          <input type="text" id="ci-email" placeholder="para que pueda responderte">
+        </div>
       </div>
       <div class="campo">
-        <span class="etiqueta">Tu correo</span>
-        <input type="text" id="contacto-email" placeholder="tu@correo.es">
+        <span class="etiqueta">Tu situación actual</span>
+        <input type="text" id="ci-situacion" placeholder="Ej: Maestro/a de Primaria en Ferrol, busco Santiago">
       </div>
-      <div class="campo" style="grid-column:1/-1">
-        <span class="etiqueta">Mensaje <span class="etiqueta-sub">(opcional)</span></span>
-        <textarea id="contacto-mensaje" style="min-height:70px" placeholder="Cuéntale tu situación, horarios, preferencias..."></textarea>
+      <div class="campo">
+        <span class="etiqueta">Mensaje</span>
+        <textarea id="ci-mensaje" style="min-height:80px" placeholder="Cuéntale tu situación, horarios, si aceptas provisional o definitiva..."></textarea>
+      </div>
+      <div style="display:flex;gap:0.65rem;justify-content:flex-end;flex-wrap:wrap;">
+        <button class="btn-cerrar" onclick="cerrarContactoInterno()" style="border:1px solid var(--borde)">Cancelar</button>
+        <button class="btn-primario" onclick="enviarContactoInterno()" id="ci-btn-enviar">📨 Enviar mensaje</button>
       </div>
     </div>
-    <div class="modal-pe">
-      <button class="btn-cerrar" onclick="cerrarModal()">Cancelar</button>
-      <button class="btn-primario" onclick="enviarInteres()">✉️ Abrir correo</button>
+    <!-- Sin email registrado -->
+    <div class="ci-sin-email" id="ci-sin-email" style="display:none;">
+      <div class="icona-warn">⚠️</div>
+      <p style="font-weight:700;color:var(--azul-oscuro);margin-bottom:0.5rem;">Docente sin email registrado</p>
+      <p style="color:var(--texto-suave);margin-bottom:1rem;">Este docente no tiene correo electrónico registrado. Te recomendamos contactar directamente con su centro educativo.</p>
+      <p id="ci-centro-info" style="font-size:0.88rem;color:var(--texto);font-weight:600;"></p>
+      <button class="btn-secundario" onclick="cerrarContactoInterno()" style="margin-top:1rem;">Cerrar</button>
+    </div>
+    <!-- Mensaje enviado -->
+    <div class="ci-enviado" id="ci-enviado">
+      <div class="icona">✅</div>
+      <p>¡Mensaje enviado!</p>
+      <small>Se ha abierto tu cliente de correo con el mensaje preparado. Si no se abrió automáticamente, copia los datos del docente y escríbele directamente.</small>
     </div>
   </div>
 </div>
@@ -1724,6 +2175,9 @@ footer a:hover { color: var(--blanco); }
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet-polylinedecorator@1.6.0/dist/leaflet.polylineDecorator.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <script>
 // =============================================
 // CONCELLOS DE GALICIA POR PROVINCIA
@@ -1867,7 +2321,32 @@ const permutas = [
   { id:134, nome:"Docente CT", iniciais:"CT", cor:"#0093d6", cuerpo:"Maestros (590)", especialidad:"Música", ofrece_prov:"A Coruña", ofrece_concello:"Coristanco", ofrece_centro:"CRA A Tarandeira", busca_prov:"A Coruña", busca_concellos:["Santiago de Compostela", "Coruña (A)", "Vigo"], obs:"O CRA está formado por 7 escoliñas asociadas. Santiago, Vigo e viaxable de ambas ata 30 min.", email:"", fecha:"Mayo 2025" },
   { id:135, nome:"Docente SM", iniciais:"SM", cor:"#2a6496", cuerpo:"Maestros (590)", especialidad:"Música", ofrece_prov:"A Coruña", ofrece_concello:"Somozas (As)", ofrece_centro:"CEIP O Marbán", busca_prov:"A Coruña", busca_concellos:["Ferrol", "Narón", "Fene", "Carballo"], obs:"Centro rural. Aulas mixtas por ciclos. Comedor. Zona do Salnés, o Barbanza ou próximas.", email:"", fecha:"Mayo 2025" },
   { id:136, nome:"Docente CG", iniciais:"CG", cor:"#003d5c", cuerpo:"Maestros (590)", especialidad:"Música", ofrece_prov:"A Coruña", ofrece_concello:"Carballo", ofrece_centro:"CEIP Plurilingüe de Gándara-Sofán", busca_prov:"A Coruña", busca_concellos:["Coruña (A)", "Oleiros", "Cambre", "Culleredo"], obs:"Música e Arts (plástica en inglés). Coruña ciudad y alrededores. Definitiva. Inglés.", email:"", fecha:"Mayo 2025" },
-  { id:137, nome:"Docente CB", iniciais:"CB", cor:"#0066a2", cuerpo:"Maestros (590)", especialidad:"Música", ofrece_prov:"A Coruña", ofrece_concello:"Carballo", ofrece_centro:"CPI Bergantiños", busca_prov:"A Coruña", busca_concellos:["Coruña (A)", "Oleiros", "Cambre", "Culleredo", "Arteixo"], obs:"Non collín a praza xa que tiven a oportunidade de permutar. Concello de A Coruña e contorna (Oleiros, Cambre, Culleredo, Arteixo). O máis preto posible da cidade da Coruña.", email:"", fecha:"Mayo 2025" }
+  { id:137, nome:"Docente CB", iniciais:"CB", cor:"#0066a2", cuerpo:"Maestros (590)", especialidad:"Música", ofrece_prov:"A Coruña", ofrece_concello:"Carballo", ofrece_centro:"CPI Bergantiños", busca_prov:"A Coruña", busca_concellos:["Coruña (A)", "Oleiros", "Cambre", "Culleredo", "Arteixo"], obs:"Non collín a praza xa que tiven a oportunidade de permutar. Concello de A Coruña e contorna (Oleiros, Cambre, Culleredo, Arteixo). O máis preto posible da cidade da Coruña.", email:"", fecha:"Mayo 2025" },
+  // ── ED. FÍSICA (Mayo 2025) ──
+  { id:138, nome:"Docente VF", iniciais:"VF", cor:"#007bc4", cuerpo:"Maestros (590)", especialidad:"Ed. Física (primaria)", ofrece_prov:"Pontevedra", ofrece_concello:"Vigo", ofrece_centro:"CEIP de Fonte Escura", busca_prov:"Pontevedra", busca_concellos:["Vigo", "Pontevedra", "Marín"], obs:"Hai que completar horario. A menos de 40 minutos de Vigo.", email:"", fecha:"Mayo 2025" },
+  { id:139, nome:"Docente LF", iniciais:"LF", cor:"#002b4a", cuerpo:"Maestros (590)", especialidad:"Ed. Física (primaria)", ofrece_prov:"A Coruña", ofrece_concello:"Laxe", ofrece_centro:"CPI Plurilingüe Cabo da Area", busca_prov:"A Coruña", busca_concellos:["Betanzos", "Coruña (A)", "Cambre", "Culleredo"], obs:"Betanzos e arredores. Definitiva.", email:"", fecha:"Mayo 2025" },
+  { id:140, nome:"Docente CA", iniciais:"CA", cor:"#005a8e", cuerpo:"Maestros (590)", especialidad:"Ed. Física (primaria)", ofrece_prov:"Ourense", ofrece_concello:"Cartelle", ofrece_centro:"CEIP San Marcos Plurilingüe", busca_prov:"Lugo", busca_concellos:["Lugo", "Sarria", "Monforte de Lemos"], obs:"Primeiro destino definitivo. De Lugo como máximo.", email:"", fecha:"Mayo 2025" },
+  { id:141, nome:"Docente CF", iniciais:"CF", cor:"#0093d6", cuerpo:"Maestros (590)", especialidad:"Ed. Física (primaria)", ofrece_prov:"A Coruña", ofrece_concello:"Coruña (A)", ofrece_centro:"CEIP Plurilingüe María Barbeito e Cerviño", busca_prov:"A Coruña", busca_concellos:["Carballo", "Coristanco", "Ordes"], obs:"Sen tutoría. Carballo ou Coristanco, renomeable ou proximidades.", email:"", fecha:"Mayo 2025" },
+  { id:142, nome:"Docente VA", iniciais:"VA", cor:"#2a6496", cuerpo:"Maestros (590)", especialidad:"Ed. Física (primaria)", ofrece_prov:"Pontevedra", ofrece_concello:"Vilagarcía de Arousa", ofrece_centro:"CEIP Rosalía de Castro", busca_prov:"A Coruña", busca_concellos:["Muros", "Noia", "Ponteceso"], obs:"Xornada única. Proximidades de Muros. Provisional.", email:"", fecha:"Mayo 2025" },
+  { id:143, nome:"Docente SF", iniciais:"SF", cor:"#003d5c", cuerpo:"Maestros (590)", especialidad:"Ed. Física (primaria)", ofrece_prov:"Ourense", ofrece_concello:"Sandiás", ofrece_centro:"CEIP de Sandiás", busca_prov:"Ourense", busca_concellos:["Amoeiro", "Coruña (A)", "Ourense"], obs:"Permuto definitiva ou provisional. Horario 9:35-14:35. Boas instalacións. Amoeiro, Canal.", email:"", fecha:"Mayo 2025" },
+  { id:144, nome:"Docente PF", iniciais:"PF", cor:"#0066a2", cuerpo:"Maestros (590)", especialidad:"Ed. Física (primaria)", ofrece_prov:"A Coruña", ofrece_concello:"Padrón", ofrece_centro:"CEIP Rosalía de Castro Plurilingüe", busca_prov:"A Coruña", busca_concellos:["Abegondo", "Mesía", "Cerceda", "Padrón"], obs:"Horario 9:35-14:35. Boas instalacións. Abegondo, Mesía, Cerceda, Arzúa, Ordes, Rianxo, Padrón.", email:"", fecha:"Mayo 2025" },
+  { id:145, nome:"Docente PO", iniciais:"PO", cor:"#004f7c", cuerpo:"Maestros (590)", especialidad:"Ed. Física (primaria)", ofrece_prov:"Pontevedra", ofrece_concello:"Porriño (O)", ofrece_centro:"CEIP Antonio Palacios Plurilingüe", busca_prov:"Pontevedra", busca_concellos:["Pontevedra", "Coruña (A)"], obs:"Praza so de EF. Xornada continua. Pontevedra, preto de Coruña cidade. Definitiva.", email:"", fecha:"Mayo 2025" },
+  { id:146, nome:"Docente SC", iniciais:"SC", cor:"#007bc4", cuerpo:"Maestros (590)", especialidad:"Ed. Física (primaria)", ofrece_prov:"A Coruña", ofrece_concello:"Santa Comba", ofrece_centro:"CEIP Barrié de la Maza", busca_prov:"A Coruña", busca_concellos:["Coruña (A)", "Santiago de Compostela"], obs:"Xornada continua de 9:30-14:30h. Coruña cidade (máximo 35 min). Provisional.", email:"", fecha:"Mayo 2025" },
+  { id:147, nome:"Docente MF", iniciais:"MF", cor:"#002b4a", cuerpo:"Maestros (590)", especialidad:"Ed. Física (primaria)", ofrece_prov:"A Coruña", ofrece_concello:"Mañón", ofrece_centro:"CEIP Francisco López Estrada", busca_prov:"Lugo", busca_concellos:["Lugo", "Sarria", "Viveiro"], obs:"Provisional.", email:"", fecha:"Mayo 2025" },
+  { id:148, nome:"Docente TF", iniciais:"TF", cor:"#005a8e", cuerpo:"Maestros (590)", especialidad:"Ed. Física (primaria)", ofrece_prov:"Pontevedra", ofrece_concello:"Tomiño", ofrece_centro:"CEIP Antonio Fernández", busca_prov:"A Coruña", busca_concellos:["Santiago de Compostela", "Coruña (A)"], obs:"Xornada de 9:00-14:00h continua. Sigüeiro, preto de Santiago.", email:"", fecha:"Mayo 2025" },
+  { id:149, nome:"Docente RF", iniciais:"RF", cor:"#0093d6", cuerpo:"Maestros (590)", especialidad:"Ed. Física (primaria)", ofrece_prov:"Pontevedra", ofrece_concello:"Rosal (O)", ofrece_centro:"CRA María Zambrano Plurilingüe", busca_prov:"Pontevedra", busca_concellos:["Vigo", "Pontevedra"], obs:"Grupos pequenos, 4 unidades. Vigo ou arredores. Provisional.", email:"", fecha:"Mayo 2025" },
+  { id:150, nome:"Docente GF", iniciais:"GF", cor:"#2a6496", cuerpo:"Maestros (590)", especialidad:"Ed. Física (primaria)", ofrece_prov:"Ourense", ofrece_concello:"Gudiña (A)", ofrece_centro:"CEIP Laureano Prieto", busca_prov:"A Coruña", busca_concellos:["Coruña (A)", "Pontevedra", "Ourense"], obs:"Praza de EF Primaria. Da Coruña ou Pontevedra viaxable. Provisional.", email:"", fecha:"Mayo 2025" },
+  { id:151, nome:"Docente GO", iniciais:"GO", cor:"#003d5c", cuerpo:"Maestros (590)", especialidad:"Ed. Física (primaria)", ofrece_prov:"Pontevedra", ofrece_concello:"Gondomar", ofrece_centro:"CEP Xosé Neira Vilas", busca_prov:"A Coruña", busca_concellos:["Coruña (A)", "Carballo", "Santiago de Compostela"], obs:"EF do corpo de mestres xornada. Dende Coruña/Carballo ou arredores. Provisional.", email:"", fecha:"Mayo 2025" },
+  { id:152, nome:"Docente CP", iniciais:"CP", cor:"#0066a2", cuerpo:"Maestros (590)", especialidad:"Ed. Física (primaria)", ofrece_prov:"A Coruña", ofrece_concello:"Camariñas", ofrece_centro:"CEIP Plurilingüe de Ponte do Porto", busca_prov:"A Coruña", busca_concellos:["Coruña (A)", "Oleiros", "Cambre", "Culleredo"], obs:"Xornada contínua de 9:30-14:30. Tamén sería posible Santiago ou arredores.", email:"", fecha:"Mayo 2025" },
+  { id:153, nome:"Docente MA", iniciais:"MA", cor:"#004f7c", cuerpo:"Maestros (590)", especialidad:"Ed. Física (primaria)", ofrece_prov:"Pontevedra", ofrece_concello:"Marín", ofrece_centro:"CEIP de Ardán", busca_prov:"Pontevedra", busca_concellos:["Tui", "Ponteareas", "Salvaterra de Miño"], obs:"Titoría (3º E - 4º Mixto). Preto de Tui. Provisional.", email:"", fecha:"Mayo 2025" },
+  { id:154, nome:"Docente GU", iniciais:"GU", cor:"#007bc4", cuerpo:"Maestros (590)", especialidad:"Ed. Física (primaria)", ofrece_prov:"Pontevedra", ofrece_concello:"Guarda (A)", ofrece_centro:"CEIP A Sangriña Plurilingüe", busca_prov:"Pontevedra", busca_concellos:["Pontevedra", "Santiago de Compostela", "Vigo"], obs:"Non bilingüe. Pontevedra, Santiago, Coruña. Provisional.", email:"", fecha:"Mayo 2025" },
+  { id:155, nome:"Docente PC", iniciais:"PC", cor:"#002b4a", cuerpo:"Maestros (590)", especialidad:"Ed. Física (primaria)", ofrece_prov:"A Coruña", ofrece_concello:"Pobra do Caramiñal (A)", ofrece_centro:"CEIP Pilar Maestu Sierra", busca_prov:"A Coruña", busca_concellos:["Ferrol", "Narón", "Fene", "Eume"], obs:"Centro con xornada única. Ferroltera, Eume e MENTE. Definitiva.", email:"", fecha:"Mayo 2025" },
+  { id:156, nome:"Docente MQ", iniciais:"MQ", cor:"#005a8e", cuerpo:"Maestros (590)", especialidad:"Ed. Física (primaria)", ofrece_prov:"Ourense", ofrece_concello:"Mezquita (A)", ofrece_centro:"CEIP Augusto Assía", busca_prov:"A Coruña", busca_concellos:["Betanzos", "Coruña (A)", "Ourense"], obs:"Proposta que me achegue a Betanzos, Coruña, Oza. Definitiva.", email:"", fecha:"Mayo 2025" },
+  { id:157, nome:"Docente CE", iniciais:"CE", cor:"#0093d6", cuerpo:"Maestros (590)", especialidad:"Ed. Física (primaria)", ofrece_prov:"A Coruña", ofrece_concello:"Cerdido", ofrece_centro:"CEIP da Barqueira Plurilingüe", busca_prov:"A Coruña", busca_concellos:["Ferrol", "Narón", "Fene"], obs:"Menos de 10 alumnos en Vilalba. Ferroltera zona máis próxima. Provisional.", email:"", fecha:"Mayo 2025" },
+  { id:158, nome:"Docente VR", iniciais:"VR", cor:"#2a6496", cuerpo:"Maestros (590)", especialidad:"Ed. Física (primaria)", ofrece_prov:"Ourense", ofrece_concello:"Vilardevós", ofrece_centro:"CEIP Rodolfo Núñez Plurilingüe", busca_prov:"A Coruña", busca_concellos:["Coruña (A)", "Ferrol", "Santiago de Compostela"], obs:"Por EF de educación. Próxima á provincia de A Coruña. Definitiva.", email:"", fecha:"Mayo 2025" },
+  { id:159, nome:"Docente BO", iniciais:"BO", cor:"#003d5c", cuerpo:"Maestros (590)", especialidad:"Ed. Física (primaria)", ofrece_prov:"Ourense", ofrece_concello:"Valdeorras (O Barco)", ofrece_centro:"CEIP Condesa de Fenosa", busca_prov:"Pontevedra", busca_concellos:["Pontevedra", "Vigo", "Coruña (A)"], obs:"Xa con piso alquilado. Pontevedra e arredores. Provisional.", email:"", fecha:"Mayo 2025" },
+  { id:160, nome:"Docente MU", iniciais:"MU", cor:"#0066a2", cuerpo:"Maestros (590)", especialidad:"Ed. Física (primaria)", ofrece_prov:"A Coruña", ofrece_concello:"Muros", ofrece_centro:"CEIP Ramón de Artaza y Malvárez", busca_prov:"Pontevedra", busca_concellos:["Vigo", "Pontevedra", "Coruña (A)"], obs:"A menos de 1h dende Vigo. Inglés. Provisional.", email:"", fecha:"Mayo 2025" },
+  { id:161, nome:"Docente ME", iniciais:"ME", cor:"#004f7c", cuerpo:"Maestros (590)", especialidad:"Ed. Física (primaria)", ofrece_prov:"A Coruña", ofrece_concello:"Mesía", ofrece_centro:"CPI de Xanceda", busca_prov:"A Coruña", busca_concellos:["Coruña (A)", "Santiago de Compostela", "Ordes"], obs:"Impártese so Educación. Arredores ata un máximo. Provisional.", email:"", fecha:"Mayo 2025" }
 ];
 
 let modalActual = null;
@@ -2019,6 +2498,7 @@ function buscar() {
   const ofConc = document.getElementById('f-ofrece-concello').value;
   const buProv = document.getElementById('f-busca-prov').value;
   const buConcs = msEstado['ms-busca'] ? [...msEstado['ms-busca']] : [];
+  const tipo = document.getElementById('f-tipo') ? document.getElementById('f-tipo').value : '';
 
   const filtradas = permutas.filter(p => {
     if (cuerpo && p.cuerpo !== cuerpo) return false;
@@ -2027,6 +2507,7 @@ function buscar() {
     if (ofConc && p.ofrece_concello !== ofConc) return false;
     if (buProv && p.busca_prov !== buProv) return false;
     if (buConcs.length > 0 && !buConcs.some(c => p.busca_concellos.includes(c))) return false;
+    if (tipo && !p.obs.toLowerCase().includes(tipo.toLowerCase())) return false;
     return true;
   });
 
@@ -2067,7 +2548,7 @@ function renderCards(lista) {
             <div class="tp-meta">${p.cuerpo}</div>
           </div>
         </div>
-        <span class="tp-etiqueta">${p.especialidad}</span>
+        <span class="tp-etiqueta">${p.especialidad}${tipoBadge(p.obs)}</span>
       </div>
       <div class="tp-destinos">
         <div class="tp-destino">
@@ -2084,7 +2565,7 @@ function renderCards(lista) {
       </div>
       ${p.obs ? `<div class="tp-obs">${p.obs.substring(0,95)}${p.obs.length>95?'…':''}</div>` : ''}
       <div class="tp-pe">
-        <span class="tp-data">Publicado ${p.fecha}</span>
+        <span class="tp-data">${p._cloud ? '<span class="tp-cloud-dot"></span>' : ''}Publicado ${p.fecha}</span>
         <button class="btn-contactar" onclick="event.stopPropagation();abrirModal(${p.id})">Contactar</button>
       </div>
     </div>`;
@@ -2217,8 +2698,11 @@ function publicar() {
     ? nomeInput.split(' ').slice(0,2).map(n=>n[0]).join('').toUpperCase()
     : ofConc.slice(0,2).toUpperCase();
 
+  // Honeypot check
+  if (document.getElementById('hp-field') && document.getElementById('hp-field').value) return;
+
   const nueva = {
-    id: permutas.length+1,
+    id: permutas.length + 1,
     nome, iniciais,
     cor: CORES[permutas.length % CORES.length],
     cuerpo, especialidad: esp,
@@ -2226,12 +2710,41 @@ function publicar() {
     ofrece_centro: document.getElementById('p-ofrece-centro').value || '',
     busca_prov: buProv, busca_concellos: buConcs,
     obs: document.getElementById('p-obs').value,
-    email, fecha: 'hace un momento'
+    email, fecha: 'hace un momento',
+    _cloud: true
   };
-  permutas.unshift(nueva);
-  document.getElementById('totalPermutas').textContent = permutas.length;
-  document.getElementById('aviso-exito').classList.add('mostrar');
-  document.getElementById('aviso-exito').scrollIntoView({behavior:'smooth',block:'nearest'});
+
+  // Guardar en Firestore si está disponible
+  const btnPublicar = document.querySelector('#panel-publicar .btn-primario');
+  if (btnPublicar) { btnPublicar.disabled = true; btnPublicar.textContent = 'Publicando…'; }
+
+  const savePromise = (typeof window.guardarPermutaFirestore === 'function')
+    ? window.guardarPermutaFirestore(nueva)
+    : Promise.resolve(null);
+
+  savePromise.then(fbId => {
+    if (fbId) nueva._firebaseId = fbId;
+    permutas.unshift(nueva);
+    document.getElementById('totalPermutas').textContent = permutas.length;
+    const aviso = document.getElementById('aviso-exito');
+    if (aviso) {
+      aviso.querySelector('p').textContent = fbId
+        ? '✅ Permuta publicada y guardada en la nube'
+        : '✅ Permuta publicada correctamente';
+      aviso.querySelector('small').textContent = fbId
+        ? 'Tu oferta está guardada permanentemente y otros docentes podrán verla aunque cierren y vuelvan a abrir la web.'
+        : 'Tu oferta es visible en esta sesión.';
+      aviso.classList.add('mostrar');
+      aviso.scrollIntoView({behavior:'smooth',block:'nearest'});
+    }
+    if (btnPublicar) { btnPublicar.disabled = false; btnPublicar.textContent = 'Publicar permuta'; }
+    // Buscar matches automáticos
+    const matches = buscarMatchesParaNuevoDocente(nueva);
+    if (matches.length > 0) mostrarMatchesBanner(matches, nueva);
+  }).catch(err => {
+    console.error(err);
+    if (btnPublicar) { btnPublicar.disabled = false; btnPublicar.textContent = 'Publicar permuta'; }
+  });
 
   // Reset
   ['p-nome','p-email','p-ofrece-centro','p-obs'].forEach(id=>document.getElementById(id).value='');
@@ -2421,6 +2934,11 @@ function filtrarMapa() {
   // Render list
   renderListaMapa(permumasFiltradas);
 
+  // Use cluster group
+  const clusterGroup = (typeof L.markerClusterGroup === 'function')
+    ? L.markerClusterGroup({ maxClusterRadius: 40, disableClusteringAtZoom: 12 })
+    : null;
+
   // Add markers + arrows
   permumasFiltradas.forEach(p => {
     const coordOfrece = CONCELLO_COORDS[p.ofrece_concello];
@@ -2455,6 +2973,7 @@ function filtrarMapa() {
 
     marker.on('click', () => destacarItem(p.id));
     marcadores.push(marker);
+    if (clusterGroup) clusterGroup.addLayer(marker);
 
     // Draw arrow for each destination concello
     p.busca_concellos.forEach(destino => {
@@ -2507,10 +3026,19 @@ function filtrarMapa() {
     });
   });
 
+  // Add cluster or individual markers
+  if (clusterGroup) {
+    mapaObj.addLayer(clusterGroup);
+    marcadores.push(clusterGroup); // track for removal
+  }
+
   // Fit bounds if markers exist
-  if (marcadores.length > 0) {
-    const group = L.featureGroup(marcadores);
+  const boundsMarkers = marcadores.filter(m => m.getLatLng);
+  if (boundsMarkers.length > 0) {
+    const group = L.featureGroup(boundsMarkers);
     mapaObj.fitBounds(group.getBounds().pad(0.15));
+  } else if (marcadores.length > 0) {
+    mapaObj.setView([42.8, -7.8], 8);
   }
 }
 
@@ -2722,6 +3250,104 @@ function cerrarPrivacidad(e) {
     document.body.style.overflow = '';
   }
 }
+// =============================================
+// HELPERS FIREBASE UI
+// =============================================
+function mostrarCargando(visible) {
+  const el = document.getElementById('cargando-overlay');
+  if (el) el.classList.toggle('mostrar', visible);
+}
+
+function mostrarBannerNube(count) {
+  if (count <= 0) return;
+  const banner = document.getElementById('banner-nube');
+  const txt = document.getElementById('banner-nube-txt');
+  if (!banner || !txt) return;
+  txt.textContent = `${count} permuta${count>1?'s':''} nueva${count>1?'s':''} cargada${count>1?'s':''} desde la nube`;
+  banner.classList.add('mostrar');
+  // Move banner to top of results
+  const resultsHeader = document.getElementById('resultados-cab') ||
+                        document.querySelector('.resultados-cab');
+  if (resultsHeader) resultsHeader.parentNode.insertBefore(banner, resultsHeader);
+  setTimeout(() => banner.classList.remove('mostrar'), 6000);
+}
+
+function mostrarToastNuevaPermuta(p) {
+  const toast = document.getElementById('toast-nueva');
+  if (!toast) return;
+  toast.textContent = `🆕 Nueva permuta: ${p.especialidad} en ${p.ofrece_concello}`;
+  toast.classList.add('mostrar');
+  setTimeout(() => toast.classList.remove('mostrar'), 5000);
+}
+
+// =============================================
+// SCORE DE COMPATIBILIDAD
+// =============================================
+function calcularScore(yo, p) {
+  let score = 0;
+  if (yo) {
+    if (yo.busca_concellos && yo.busca_concellos.includes(p.ofrece_concello)) score += 50;
+    if (p.busca_concellos && p.busca_concellos.includes(yo.ofrece_concello)) score += 50;
+  }
+  return score;
+}
+
+function scoreBadge(score) {
+  if (score >= 80) return `<span class="score-badge score-alto">★ ${score}% match</span>`;
+  if (score >= 40) return `<span class="score-badge score-medio">◑ ${score}% match</span>`;
+  return '';
+}
+
+function tipoBadge(obs) {
+  if (!obs) return '';
+  const lower = obs.toLowerCase();
+  if (lower.includes('definitiv')) return '<span class="tipo-badge tipo-def">Definitiva</span>';
+  if (lower.includes('provisional')) return '<span class="tipo-badge tipo-prov">Provisional</span>';
+  return '';
+}
+
+// =============================================
+// MATCHING AUTOMÁTICO AL PUBLICAR
+// =============================================
+function buscarMatchesParaNuevoDocente(nueva) {
+  return permutas.filter(p => {
+    if (p.id === nueva.id) return false;
+    if (p.especialidad !== nueva.especialidad) return false;
+    const pOfrece = nueva.busca_concellos.includes(p.ofrece_concello);
+    const pBusca = p.busca_concellos.includes(nueva.ofrece_concello);
+    return pOfrece || pBusca;
+  }).map(p => {
+    const score = (nueva.busca_concellos.includes(p.ofrece_concello) ? 50 : 0) +
+                  (p.busca_concellos.includes(nueva.ofrece_concello) ? 50 : 0);
+    return { ...p, _score: score };
+  }).sort((a, b) => b._score - a._score).slice(0, 5);
+}
+
+function mostrarMatchesBanner(matches, nueva) {
+  if (!matches.length) return;
+  const banner = document.getElementById('match-banner');
+  const lista = document.getElementById('match-lista');
+  if (!banner || !lista) return;
+  lista.innerHTML = matches.map(p => {
+    const score = p._score;
+    const scoreClass = score === 100 ? 'alto' : score >= 50 ? 'medio' : 'bajo';
+    const scoreLabel = score === 100 ? '✓ Match perfecto' : '◑ Match parcial';
+    return `<div class="match-item">
+      <div class="match-item-info">
+        <strong>${p.nome}</strong> · ${p.especialidad}<br>
+        📍 Ofrece <strong>${p.ofrece_concello}</strong> · 🎯 Busca ${p.busca_concellos.slice(0,2).join(', ')}
+        ${p.obs ? `<br><span style="font-size:0.78rem;color:var(--texto-suave);font-style:italic;">"${p.obs.substring(0,60)}…"</span>` : ''}
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:0.35rem;">
+        <span class="match-score ${scoreClass}">${scoreLabel}</span>
+        <button class="btn-contactar" onclick="abrirModal(${p.id})" style="font-size:0.75rem;padding:0.3rem 0.7rem;">Contactar</button>
+      </div>
+    </div>`;
+  }).join('');
+  banner.classList.add('mostrar');
+  banner.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
 </script>
 
 <!-- MODAL POLÍTICA DE PRIVACIDAD -->
@@ -2793,6 +3419,21 @@ function cerrarPrivacidad(e) {
       <button class="btn-primario" onclick="cerrarPrivacidad()">Entendido</button>
     </div>
   </div>
+</div>
+
+
+<!-- Indicador de carga -->
+<div class="cargando-overlay" id="cargando-overlay">
+  <div class="spinner"></div>
+  Cargando permutas…
+</div>
+
+<!-- Toast nueva permuta -->
+<div class="toast-nueva" id="toast-nueva" onclick="this.classList.remove('mostrar')"></div>
+
+<!-- Banner permutas en nube -->
+<div class="banner-nube" id="banner-nube">
+  ☁️ <span id="banner-nube-txt"></span>
 </div>
 
 </body>
