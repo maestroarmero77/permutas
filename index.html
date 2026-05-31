@@ -1,0 +1,2799 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PermuGal · Permutas de Profesores en Galicia</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+/* =============================================
+   PALETA CORPORATIVA (Manual Identidade Xunta)
+   Principal:  #007bc4  (CMYK 100 35 0 0 / RGB 0 123 196 / Pantone 7461C)
+   Oscuro:     #002b4a  (CMYK 100 80 45 45 / RGB 0 43 74 / Pantone 7463C)
+   50%:        #80bde2
+   25%:        #bfdef1
+   10%:        #e6f2fa
+   Blanco:     #ffffff
+   Texto:      rgba(0,0,0,0.70)  (negro 70%)
+   ============================================= */
+:root {
+  --azul:        #007bc4;
+  --azul-oscuro: #002b4a;
+  --azul-50:     #80bde2;
+  --azul-25:     #bfdef1;
+  --azul-10:     #e6f2fa;
+  --blanco:      #ffffff;
+  --texto:       rgba(0,0,0,0.70);
+  --texto-suave: rgba(0,0,0,0.45);
+  --borde:       rgba(0,123,196,0.18);
+  --fondo:       #f4f8fb;
+  --font: 'Source Sans 3', 'Helvetica Neue', Arial, sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font);
+  background: var(--fondo);
+  color: var(--texto);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── CABECEIRA ─────────────────────────────── */
+.cabeceira {
+  background: var(--blanco);
+  border-bottom: 3px solid var(--azul);
+}
+
+.cabeceira-banner {
+  width: 100%;
+  padding: 0;
+  position: relative;
+  line-height: 0;
+}
+
+.marca {
+  display: block;
+  text-decoration: none;
+  width: 100%;
+  line-height: 0;
+}
+
+.marca-logo {
+  width: 50%;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+  object-fit: contain;
+}
+
+.btn-cabeceira {
+  position: absolute;
+  top: 50%;
+  right: 1.5rem;
+  transform: translateY(-50%);
+  background: var(--azul);
+  color: var(--blanco);
+  border: none;
+  padding: 0.65rem 1.5rem;
+  border-radius: 3px;
+  font-family: var(--font);
+  font-size: 0.93rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+  letter-spacing: 0.2px;
+  z-index: 2;
+}
+.btn-cabeceira:hover { background: var(--azul-oscuro); }
+
+/* ── HERO ─────────────────────────────────── */
+.hero {
+  background: var(--azul);
+  color: var(--blanco);
+  padding: 0.75rem 1.5rem 0.6rem;
+}
+
+.hero-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2rem;
+  align-items: center;
+}
+
+.hero h1 {
+  font-size: clamp(1.8rem, 4vw, 2.8rem);
+  font-weight: 300;
+  line-height: 1.2;
+  margin-bottom: 0.6rem;
+  letter-spacing: -0.5px;
+}
+.hero h1 strong { font-weight: 700; }
+
+.hero-desc {
+  font-size: 1rem;
+  opacity: 0.85;
+  font-weight: 300;
+  max-width: 520px;
+  line-height: 1.65;
+}
+
+.hero-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  text-align: right;
+}
+
+.stat { line-height: 1; }
+.stat-num {
+  font-size: 2rem;
+  font-weight: 700;
+  display: block;
+}
+.stat-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  opacity: 0.7;
+  font-weight: 400;
+}
+
+/* ── MAIN ─────────────────────────────────── */
+.main {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+
+/* ── TABS ─────────────────────────────────── */
+.tabs {
+  display: flex;
+  border-bottom: 2px solid var(--azul-25);
+  margin-bottom: 2rem;
+  gap: 0;
+}
+
+.tab {
+  padding: 0.85rem 1.75rem;
+  border: none;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  background: transparent;
+  font-family: var(--font);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--texto-suave);
+  cursor: pointer;
+  transition: all 0.15s;
+  letter-spacing: 0.2px;
+}
+.tab.active {
+  color: var(--azul);
+  border-bottom-color: var(--azul);
+}
+.tab:hover:not(.active) { color: var(--azul); background: var(--azul-10); }
+
+/* ── PANEL ────────────────────────────────── */
+.panel { display: none; animation: aparecer 0.2s ease; }
+.panel.active { display: block; }
+@keyframes aparecer { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* ── TARXETA FORMULARIO ───────────────────── */
+.tarxeta {
+  background: var(--blanco);
+  border: 1px solid var(--borde);
+  border-radius: 2px;
+  padding: 1.75rem 2rem;
+  margin-bottom: 1.5rem;
+}
+
+.tarxeta-titulo {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--azul-oscuro);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 2px solid var(--azul);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* ── FILTROS BUSCA ────────────────────────── */
+.filtros-rexilla {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.filtros-fila-dupla {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.campo { display: flex; flex-direction: column; gap: 0.3rem; }
+
+.etiqueta {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.9px;
+  color: var(--azul);
+}
+
+.etiqueta-sub {
+  font-size: 0.72rem;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--texto-suave);
+  margin-left: 0.3rem;
+}
+
+select, input[type="text"], textarea {
+  font-family: var(--font);
+  font-size: 0.93rem;
+  color: var(--texto);
+  background: var(--fondo);
+  border: 1px solid var(--azul-50);
+  border-radius: 2px;
+  padding: 0.6rem 0.85rem;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='7'%3E%3Cpath d='M1 1l4.5 4.5L10 1' stroke='%23007bc4' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.85rem center;
+  padding-right: 2.2rem;
+  cursor: pointer;
+}
+
+select:focus, input[type="text"]:focus, textarea:focus {
+  outline: none;
+  border-color: var(--azul);
+  box-shadow: 0 0 0 3px rgba(0,123,196,0.15);
+  background: var(--blanco);
+}
+
+select:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+textarea {
+  resize: vertical;
+  min-height: 80px;
+  width: 100%;
+  line-height: 1.55;
+}
+
+/* ── MULTISELECT ──────────────────────────── */
+.ms-envolta { position: relative; }
+
+.ms-trigger {
+  width: 100%;
+  text-align: left;
+  font-family: var(--font);
+  font-size: 0.93rem;
+  color: var(--texto);
+  background: var(--fondo) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='7'%3E%3Cpath d='M1 1l4.5 4.5L10 1' stroke='%23007bc4' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 0.85rem center;
+  border: 1px solid var(--azul-50);
+  border-radius: 2px;
+  padding: 0.6rem 2.2rem 0.6rem 0.85rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  min-height: 38px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ms-trigger:hover, .ms-trigger.aberto {
+  border-color: var(--azul);
+  box-shadow: 0 0 0 3px rgba(0,123,196,0.15);
+  background-color: var(--blanco);
+}
+.ms-trigger:disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
+.ms-trigger.ten-valores { color: var(--azul); font-weight: 600; }
+
+.ms-desplegable {
+  display: none;
+  position: absolute;
+  top: calc(100% + 3px);
+  left: 0; right: 0;
+  background: var(--blanco);
+  border: 1.5px solid var(--azul);
+  border-radius: 2px;
+  box-shadow: 0 6px 24px rgba(0,43,74,0.15);
+  z-index: 100;
+  max-height: 300px;
+  flex-direction: column;
+}
+.ms-desplegable.aberto { display: flex; animation: aparecer 0.15s ease; }
+
+.ms-busca-envolta { padding: 0.5rem 0.7rem; border-bottom: 1px solid var(--azul-25); }
+.ms-busca-inp {
+  width: 100%;
+  font-family: var(--font);
+  font-size: 0.88rem;
+  color: var(--texto);
+  background: var(--fondo);
+  border: 1px solid var(--azul-25);
+  border-radius: 2px;
+  padding: 0.4rem 0.7rem;
+}
+.ms-busca-inp:focus { outline: none; border-color: var(--azul); background: var(--blanco); }
+
+.ms-accions {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.35rem 0.7rem;
+  border-bottom: 1px solid var(--azul-25);
+}
+.ms-btn-accion {
+  font-family: var(--font);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--azul);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.15rem 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.ms-btn-accion:hover { text-decoration: underline; }
+
+.ms-lista { overflow-y: auto; max-height: 210px; padding: 0.3rem 0; }
+
+.ms-elemento {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.42rem 0.85rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background 0.1s;
+}
+.ms-elemento:hover { background: var(--azul-10); }
+.ms-elemento input[type="checkbox"] {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--azul);
+  flex-shrink: 0;
+  border: none;
+  padding: 0;
+  background: none;
+  box-shadow: none;
+}
+.ms-elemento.oculto { display: none; }
+
+.ms-etiquetas { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
+
+.ms-etiqueta {
+  background: var(--azul);
+  color: var(--blanco);
+  border-radius: 2px;
+  padding: 0.22rem 0.55rem;
+  font-size: 0.76rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  letter-spacing: 0.2px;
+}
+.ms-etiqueta-x {
+  cursor: pointer;
+  opacity: 0.7;
+  font-size: 0.9rem;
+  line-height: 1;
+  font-weight: 400;
+}
+.ms-etiqueta-x:hover { opacity: 1; }
+
+/* ── BOTÓNS ───────────────────────────────── */
+.btn-primario {
+  background: var(--azul);
+  color: var(--blanco);
+  border: 2px solid var(--azul);
+  padding: 0.65rem 1.75rem;
+  border-radius: 2px;
+  font-family: var(--font);
+  font-size: 0.93rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  letter-spacing: 0.2px;
+}
+.btn-primario:hover { background: var(--azul-oscuro); border-color: var(--azul-oscuro); }
+
+.btn-secundario {
+  background: transparent;
+  color: var(--azul);
+  border: 2px solid var(--azul);
+  padding: 0.63rem 1.5rem;
+  border-radius: 2px;
+  font-family: var(--font);
+  font-size: 0.93rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+  letter-spacing: 0.2px;
+}
+.btn-secundario:hover { background: var(--azul-10); }
+
+.botones-fila { display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center; }
+
+/* ── CABECEIRA RESULTADOS ─────────────────── */
+.resultados-cab {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.resultados-conta {
+  font-size: 0.9rem;
+  color: var(--texto-suave);
+}
+.resultados-conta strong { color: var(--azul-oscuro); font-weight: 700; }
+
+/* ── REIXILLA RESULTADOS ──────────────────── */
+.reixilla-resultados {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 1px;
+  background: var(--borde);
+  border: 1px solid var(--borde);
+}
+
+/* ── TARXETA PERMUTA ──────────────────────── */
+.tarxeta-permuta {
+  background: var(--blanco);
+  padding: 1.4rem 1.5rem;
+  cursor: pointer;
+  transition: background 0.12s;
+  position: relative;
+}
+
+.tarxeta-permuta:hover { background: var(--azul-10); }
+
+.tarxeta-permuta::after {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: var(--azul);
+  transform: scaleY(0);
+  transition: transform 0.15s;
+  transform-origin: top;
+}
+.tarxeta-permuta:hover::after { transform: scaleY(1); }
+
+.tp-cabeceira {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.tp-docente { display: flex; align-items: center; gap: 0.65rem; }
+
+.tp-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--blanco);
+  flex-shrink: 0;
+  letter-spacing: 0.5px;
+}
+
+.tp-nome { font-weight: 700; font-size: 0.95rem; color: var(--azul-oscuro); line-height: 1.25; }
+.tp-meta { font-size: 0.78rem; color: var(--texto-suave); margin-top: 1px; }
+
+.tp-etiqueta {
+  background: var(--azul-10);
+  color: var(--azul);
+  border: 1px solid var(--azul-25);
+  padding: 0.25rem 0.65rem;
+  border-radius: 2px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+  letter-spacing: 0.2px;
+  flex-shrink: 0;
+}
+
+.tp-destinos {
+  display: grid;
+  grid-template-columns: 1fr 32px 1fr;
+  align-items: center;
+  gap: 0;
+  background: var(--fondo);
+  border: 1px solid var(--borde);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 0.85rem;
+}
+
+.tp-destino { padding: 0.75rem 0.85rem; }
+.tp-destino-etiqueta {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+}
+.tp-destino-etiqueta.ofrece { color: var(--azul-oscuro); }
+.tp-destino-etiqueta.busca { color: var(--azul); }
+.tp-destino-lugar { font-size: 0.92rem; font-weight: 700; color: var(--azul-oscuro); line-height: 1.25; }
+.tp-destino-prov { font-size: 0.76rem; color: var(--texto-suave); margin-top: 2px; }
+
+.tp-separador {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--azul-25);
+  align-self: stretch;
+  color: var(--azul);
+  font-size: 1rem;
+}
+
+.tp-obs {
+  font-size: 0.83rem;
+  color: var(--texto-suave);
+  line-height: 1.5;
+  border-left: 2px solid var(--azul-25);
+  padding-left: 0.65rem;
+  margin-bottom: 0.85rem;
+  font-style: italic;
+}
+
+.tp-pe {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--borde);
+}
+
+.tp-data { font-size: 0.76rem; color: var(--texto-suave); }
+
+.btn-contactar {
+  background: var(--azul);
+  color: var(--blanco);
+  border: none;
+  padding: 0.38rem 1rem;
+  border-radius: 2px;
+  font-family: var(--font);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.12s;
+  letter-spacing: 0.2px;
+}
+.btn-contactar:hover { background: var(--azul-oscuro); }
+
+/* ── SEN RESULTADOS ───────────────────────── */
+.sen-resultados {
+  grid-column: 1/-1;
+  text-align: center;
+  padding: 4rem 2rem;
+  color: var(--texto-suave);
+  background: var(--blanco);
+}
+.sen-resultados .icona { font-size: 2.5rem; margin-bottom: 0.75rem; opacity: 0.4; }
+.sen-resultados p { font-size: 1rem; }
+
+/* ── FORMULARIO PUBLICAR ──────────────────── */
+.form-tarxeta {
+  background: var(--blanco);
+  border: 1px solid var(--borde);
+  border-radius: 2px;
+  padding: 2rem 2.25rem;
+  max-width: 760px;
+}
+
+.form-titulo {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--azul-oscuro);
+  margin-bottom: 0.4rem;
+  letter-spacing: -0.3px;
+}
+
+.form-desc {
+  font-size: 0.9rem;
+  color: var(--texto-suave);
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--borde);
+  line-height: 1.55;
+}
+
+.seccion { margin-bottom: 1.75rem; }
+
+.seccion-titulo {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.3px;
+  color: var(--azul);
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.seccion-titulo::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--borde);
+}
+
+.form-reixilla { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.form-reixilla.completo { grid-template-columns: 1fr; }
+.campo-completo { grid-column: 1 / -1; }
+
+.check-fila {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  margin-bottom: 1.5rem;
+}
+
+input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--azul);
+  cursor: pointer;
+  flex-shrink: 0;
+  margin-top: 2px;
+  border: 1px solid var(--azul-50);
+  border-radius: 2px;
+  background: var(--fondo);
+  padding: 0;
+  box-shadow: none;
+}
+
+.check-label {
+  font-size: 0.88rem;
+  color: var(--texto-suave);
+  line-height: 1.5;
+  cursor: pointer;
+}
+
+.aviso-exito {
+  display: none;
+  background: var(--azul-10);
+  border: 1px solid var(--azul-25);
+  border-left: 4px solid var(--azul);
+  padding: 1.25rem 1.5rem;
+  margin-top: 1.25rem;
+  border-radius: 2px;
+  animation: aparecer 0.3s ease;
+}
+.aviso-exito.mostrar { display: flex; align-items: flex-start; gap: 0.75rem; }
+.aviso-exito .icona { font-size: 1.4rem; flex-shrink: 0; }
+.aviso-exito p { font-weight: 700; color: var(--azul-oscuro); font-size: 0.95rem; }
+.aviso-exito small { font-size: 0.83rem; color: var(--texto-suave); display: block; margin-top: 0.2rem; }
+
+/* ── MODAL ────────────────────────────────── */
+.modal-fondo {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,43,74,0.55);
+  z-index: 500;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  backdrop-filter: blur(2px);
+}
+.modal-fondo.mostrar { display: flex; }
+
+.modal {
+  background: var(--blanco);
+  border-radius: 2px;
+  padding: 2rem;
+  max-width: 520px;
+  width: 100%;
+  box-shadow: 0 20px 60px rgba(0,43,74,0.25);
+  animation: aparecer 0.2s ease;
+  border-top: 4px solid var(--azul);
+}
+
+.modal h3 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--azul-oscuro);
+  margin-bottom: 1rem;
+  letter-spacing: -0.2px;
+}
+
+.modal-info {
+  background: var(--fondo);
+  border: 1px solid var(--borde);
+  border-radius: 2px;
+  padding: 1rem 1.15rem;
+  margin-bottom: 1rem;
+}
+.modal-info p { font-size: 0.9rem; margin-bottom: 0.4rem; line-height: 1.45; }
+.modal-info p:last-child { margin-bottom: 0; }
+.modal-info strong { color: var(--azul-oscuro); font-weight: 700; }
+.modal-nota { font-size: 0.85rem; color: var(--texto-suave); line-height: 1.5; margin-bottom: 1.5rem; }
+
+.modal-pe {
+  display: flex;
+  gap: 0.65rem;
+  justify-content: flex-end;
+}
+
+.btn-cerrar {
+  background: var(--fondo);
+  color: var(--texto);
+  border: 1px solid var(--borde);
+  padding: 0.6rem 1.25rem;
+  border-radius: 2px;
+  font-family: var(--font);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.btn-cerrar:hover { background: var(--azul-10); }
+
+/* ── PE DE PÁXINA ─────────────────────────── */
+footer {
+  background: var(--azul-oscuro);
+  color: rgba(255,255,255,0.65);
+  text-align: center;
+  padding: 1.75rem 1.5rem;
+  font-size: 0.83rem;
+  line-height: 1.7;
+}
+footer strong { color: var(--blanco); }
+footer a { color: rgba(255,255,255,0.75); text-decoration: none; border-bottom: 1px solid rgba(255,255,255,0.25); }
+footer a:hover { color: var(--blanco); }
+
+/* ── RESPONSIVE TABLET ────────────────────── */
+@media (max-width: 900px) {
+  .reixilla-resultados { grid-template-columns: 1fr; }
+  .p3-grid { grid-template-columns: 1fr; }
+  .mapa-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: 280px 1fr;
+    height: auto;
+  }
+  .mapa-sidebar {
+    border-right: none;
+    border-bottom: 1px solid var(--borde);
+    max-height: 280px;
+  }
+  #mapa-contenedor { height: 360px; }
+}
+
+/* ── RESPONSIVE MÓVIL ─────────────────────── */
+@media (max-width: 768px) {
+  /* Hero */
+  .hero { padding: 0.75rem 1rem; }
+  .hero-inner { grid-template-columns: 1fr; gap: 0.75rem; }
+  .hero h1 { font-size: 1.35rem; margin-bottom: 0.3rem; }
+  .hero-desc { font-size: 0.88rem; }
+  .hero-stats { flex-direction: row; flex-wrap: wrap; gap: 1rem; }
+  .stat-num { font-size: 1.4rem; }
+  .stat-label { font-size: 0.65rem; }
+
+  /* Main */
+  .main { padding: 1rem 0.75rem 3rem; }
+
+  /* Tabs — scroll horizontal */
+  .tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; width: 100%; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab { white-space: nowrap; padding: 0.7rem 1rem; font-size: 0.83rem; flex-shrink: 0; }
+
+  /* Tarxeta buscador */
+  .tarxeta { padding: 1rem; }
+  .tarxeta-titulo { font-size: 0.85rem; margin-bottom: 1rem; }
+  .filtros-rexilla { grid-template-columns: 1fr 1fr; gap: 0.65rem; }
+  .filtros-fila-dupla { grid-template-columns: 1fr; gap: 0.65rem; }
+  .botones-fila { flex-direction: column; }
+  .botones-fila .btn-primario,
+  .botones-fila .btn-secundario { width: 100%; justify-content: center; margin-left: 0; }
+
+  /* Tarxetas resultado */
+  .reixilla-resultados { grid-template-columns: 1fr; }
+  .tp-cabeceira { flex-wrap: wrap; gap: 0.5rem; }
+  .tp-etiqueta { font-size: 0.7rem; }
+  .tp-destinos { grid-template-columns: 1fr 24px 1fr; }
+  .tp-destino { padding: 0.6rem 0.65rem; }
+  .tp-destino-lugar { font-size: 0.85rem; }
+
+  /* Formulario publicar */
+  .form-tarxeta { padding: 1.1rem 1rem; }
+  .form-titulo { font-size: 1.1rem; }
+  .form-reixilla { grid-template-columns: 1fr; }
+  .campo-completo { grid-column: 1; }
+  .check-label { font-size: 0.82rem; }
+
+  /* Mapa */
+  .mapa-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+    height: auto;
+  }
+  .mapa-sidebar { max-height: 240px; border-right: none; border-bottom: 1px solid var(--borde); }
+  #mapa-contenedor { height: 320px; }
+  .mapa-filtros { padding: 0.85rem 1rem; }
+  .tarxeta .campo select,
+  .tarxeta .campo input { font-size: 0.88rem; padding: 0.55rem 0.75rem; }
+
+  /* Permutas a 3 */
+  .p3-form-grid { grid-template-columns: 1fr !important; gap: 0.85rem; }
+  .p3-grid { grid-template-columns: 1fr; }
+  .p3-card { padding: 1rem 1.1rem; }
+  .p3-badge { font-size: 0.67rem; max-width: 130px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* Modal */
+  .modal { padding: 1.25rem 1rem; }
+  .modal h3 { font-size: 1rem; }
+  .modal > div[style*="grid"] { grid-template-columns: 1fr !important; }
+  .modal-pe { flex-direction: column-reverse; }
+  .modal-pe .btn-primario,
+  .modal-pe .btn-cerrar { width: 100%; justify-content: center; text-align: center; }
+
+  /* Multiselect */
+  .ms-desplegable { max-height: 260px; }
+
+  /* Footer */
+  footer { padding: 1.25rem 1rem; font-size: 0.78rem; }
+}
+
+/* ── RESPONSIVE MÓVIL PEQUEÑO ─────────────── */
+@media (max-width: 400px) {
+  .filtros-rexilla { grid-template-columns: 1fr; }
+  .marca-logo { width: 80%; }
+  .hero h1 { font-size: 1.15rem; }
+  .tabs { gap: 0; }
+  .tab { padding: 0.65rem 0.8rem; font-size: 0.78rem; }
+  #mapa-contenedor { height: 260px; }
+  .tp-destinos { grid-template-columns: 1fr 20px 1fr; }
+  .tp-separador { font-size: 0.8rem; }
+}
+
+/* ── PANEL MAPA ───────────────────────────── */
+.mapa-layout {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 0;
+  height: calc(100vh - 280px);
+  min-height: 520px;
+  border: 1px solid var(--borde);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.mapa-sidebar {
+  background: var(--blanco);
+  border-right: 1px solid var(--borde);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.mapa-filtros {
+  padding: 1.1rem 1.25rem;
+  border-bottom: 2px solid var(--azul);
+  background: var(--blanco);
+  flex-shrink: 0;
+}
+
+.mapa-filtros-titulo {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--azul);
+  margin-bottom: 0.75rem;
+}
+
+.mapa-resultados-lista {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.5rem 0;
+}
+
+.mapa-resultado-item {
+  padding: 0.9rem 1.25rem;
+  border-bottom: 1px solid var(--borde);
+  cursor: pointer;
+  transition: background 0.12s;
+  position: relative;
+}
+.mapa-resultado-item:hover { background: var(--azul-10); }
+.mapa-resultado-item.destacado { background: var(--azul-10); border-left: 3px solid var(--azul); }
+
+.mri-nombre { font-weight: 700; font-size: 0.9rem; color: var(--azul-oscuro); margin-bottom: 0.2rem; }
+.mri-esp { font-size: 0.78rem; color: var(--azul); font-weight: 600; margin-bottom: 0.3rem; }
+.mri-destinos { font-size: 0.78rem; color: var(--texto-suave); line-height: 1.4; }
+.mri-destinos span { font-weight: 600; color: var(--texto); }
+
+.mapa-vacio {
+  padding: 2rem 1.25rem;
+  text-align: center;
+  color: var(--texto-suave);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+.mapa-vacio .icona { font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.4; }
+
+.mapa-conta {
+  padding: 0.5rem 1.25rem;
+  font-size: 0.78rem;
+  color: var(--texto-suave);
+  background: var(--fondo);
+  border-bottom: 1px solid var(--borde);
+  flex-shrink: 0;
+}
+.mapa-conta strong { color: var(--azul-oscuro); }
+
+#mapa-contenedor {
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+/* Popup Leaflet personalizado */
+.leaflet-popup-content-wrapper {
+  border-radius: 2px !important;
+  border-top: 3px solid var(--azul) !important;
+  box-shadow: 0 6px 24px rgba(0,43,74,0.18) !important;
+  padding: 0 !important;
+  font-family: var(--font) !important;
+}
+.leaflet-popup-content {
+  margin: 0 !important;
+  width: 260px !important;
+}
+.popup-inner {
+  padding: 1rem 1.1rem;
+}
+.popup-nombre { font-weight: 700; font-size: 0.95rem; color: var(--azul-oscuro); margin-bottom: 0.2rem; }
+.popup-esp { display: inline-block; background: var(--azul-10); color: var(--azul); border: 1px solid var(--azul-25); border-radius: 2px; padding: 0.15rem 0.5rem; font-size: 0.75rem; font-weight: 700; margin-bottom: 0.6rem; }
+.popup-row { font-size: 0.83rem; margin-bottom: 0.3rem; color: var(--texto); }
+.popup-row strong { color: var(--azul-oscuro); }
+.popup-obs { font-size: 0.8rem; color: var(--texto-suave); font-style: italic; margin: 0.5rem 0; border-left: 2px solid var(--azul-25); padding-left: 0.5rem; }
+.popup-btn {
+  display: block; width: 100%; margin-top: 0.75rem;
+  background: var(--azul); color: var(--blanco); border: none;
+  padding: 0.55rem; border-radius: 2px; font-family: var(--font);
+  font-size: 0.85rem; font-weight: 700; cursor: pointer; text-align: center;
+  transition: background 0.12s; letter-spacing: 0.2px;
+}
+.popup-btn:hover { background: var(--azul-oscuro); }
+
+/* Pin clusters */
+.pin-cluster {
+  background: var(--azul);
+  color: white;
+  border-radius: 50%;
+  width: 36px; height: 36px;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 0.85rem;
+  border: 3px solid white;
+  box-shadow: 0 2px 8px rgba(0,43,74,0.3);
+}
+
+@media (max-width: 768px) {
+  .mapa-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+    height: auto;
+  }
+  .mapa-sidebar {
+    border-right: none;
+    border-bottom: 1px solid var(--borde);
+    max-height: 260px;
+  }
+  #mapa-contenedor { height: 420px; }
+}
+
+
+/* ── PANEL PERMUTA A 3 ────────────────────── */
+.p3-filtros {
+  background: var(--blanco);
+  border: 1px solid var(--borde);
+  border-radius: 2px;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.25rem;
+  display: flex;
+  gap: 1rem;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.p3-aviso {
+  background: var(--azul-10);
+  border-left: 4px solid var(--azul);
+  border-radius: 2px;
+  padding: 0.85rem 1.1rem;
+  font-size: 0.88rem;
+  color: var(--azul-oscuro);
+  margin-bottom: 1.5rem;
+  line-height: 1.55;
+}
+.p3-aviso strong { font-weight: 700; }
+
+.p3-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 1px;
+  background: var(--borde);
+  border: 1px solid var(--borde);
+  margin-bottom: 2rem;
+}
+
+.p3-card {
+  background: var(--blanco);
+  padding: 1.25rem 1.4rem;
+  transition: background 0.12s;
+}
+.p3-card:hover { background: var(--azul-10); }
+
+.p3-cabeceira {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.p3-num {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--texto-suave);
+}
+
+.p3-badge {
+  background: var(--azul);
+  color: white;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.2rem 0.6rem;
+  border-radius: 2px;
+  letter-spacing: 0.3px;
+}
+
+.p3-cadea {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.p3-eslabón {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 0.6rem;
+  align-items: stretch;
+  position: relative;
+}
+
+.p3-eslabón-liña {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 4px;
+}
+
+.p3-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--azul);
+  border: 2px solid white;
+  box-shadow: 0 0 0 2px var(--azul-25);
+  flex-shrink: 0;
+  z-index: 1;
+}
+
+.p3-line {
+  width: 2px;
+  flex: 1;
+  background: var(--azul-25);
+  margin: 3px 0;
+}
+
+.p3-arrow-down {
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 6px solid var(--azul-25);
+  flex-shrink: 0;
+}
+
+.p3-eslabón-info {
+  padding: 0.5rem 0 0.6rem;
+}
+
+.p3-eslabón-nome {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--azul-oscuro);
+  margin-bottom: 0.15rem;
+}
+
+.p3-eslabón-ofrece {
+  font-size: 0.82rem;
+  color: var(--texto);
+  line-height: 1.35;
+}
+
+.p3-eslabón-ofrece .lugar {
+  font-weight: 700;
+  color: var(--azul);
+}
+
+.p3-eslabón-busca {
+  font-size: 0.76rem;
+  color: var(--texto-suave);
+  margin-top: 0.15rem;
+}
+
+.p3-cierre {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+  padding: 0.35rem 0.6rem;
+  background: var(--azul-10);
+  border-radius: 2px;
+  border: 1px solid var(--azul-25);
+}
+
+.p3-cierre-icona { font-size: 0.9rem; }
+.p3-cierre-texto { font-size: 0.76rem; color: var(--azul-oscuro); font-weight: 600; }
+
+.p3-footer {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.85rem;
+  flex-wrap: wrap;
+}
+
+.btn-p3-contactar {
+  flex: 1;
+  background: transparent;
+  color: var(--azul);
+  border: 1.5px solid var(--azul);
+  padding: 0.4rem 0.6rem;
+  border-radius: 2px;
+  font-family: var(--font);
+  font-size: 0.77rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.12s;
+  text-align: center;
+  white-space: nowrap;
+}
+.btn-p3-contactar:hover { background: var(--azul); color: white; }
+
+.p3-vacio {
+  grid-column: 1/-1;
+  text-align: center;
+  padding: 4rem 2rem;
+  color: var(--texto-suave);
+  background: var(--blanco);
+  font-size: 0.95rem;
+}
+.p3-vacio .icona { font-size: 2.5rem; margin-bottom: 0.75rem; opacity: 0.4; }
+
+.p3-conta {
+  font-size: 0.9rem;
+  color: var(--texto-suave);
+  margin-bottom: 1rem;
+}
+.p3-conta strong { color: var(--azul-oscuro); }
+
+@media (max-width: 600px) {
+  .p3-grid { grid-template-columns: 1fr; }
+  .p3-filtros { flex-direction: column; }
+  .p3-form-grid { grid-template-columns: 1fr !important; }
+}
+
+
+/* ── MODAL PRIVACIDAD ─────────────────────── */
+.modal-privacidad {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,43,74,0.6);
+  z-index: 600;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  backdrop-filter: blur(2px);
+}
+.modal-privacidad.mostrar { display: flex; }
+
+.modal-privacidad-inner {
+  background: var(--blanco);
+  border-radius: 2px;
+  border-top: 4px solid var(--azul);
+  max-width: 680px;
+  width: 100%;
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0,43,74,0.3);
+  animation: aparecer 0.2s ease;
+}
+
+.modal-priv-cabeceira {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--borde);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.modal-priv-cabeceira h2 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--azul-oscuro);
+  letter-spacing: -0.2px;
+}
+
+.modal-priv-cerrar {
+  background: none;
+  border: none;
+  font-size: 1.3rem;
+  color: var(--texto-suave);
+  cursor: pointer;
+  line-height: 1;
+  padding: 0.2rem 0.4rem;
+}
+.modal-priv-cerrar:hover { color: var(--azul); }
+
+.modal-priv-contenido {
+  overflow-y: auto;
+  padding: 1.5rem;
+  font-size: 0.88rem;
+  line-height: 1.7;
+  color: var(--texto);
+}
+
+.modal-priv-contenido h3 {
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--azul);
+  margin: 1.25rem 0 0.5rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid var(--borde);
+}
+.modal-priv-contenido h3:first-child { margin-top: 0; }
+
+.modal-priv-contenido p { margin-bottom: 0.6rem; }
+.modal-priv-contenido ul { padding-left: 1.2rem; margin-bottom: 0.6rem; }
+.modal-priv-contenido li { margin-bottom: 0.3rem; }
+.modal-priv-contenido a { color: var(--azul); }
+.modal-priv-contenido strong { color: var(--azul-oscuro); }
+
+.modal-priv-pe {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--borde);
+  display: flex;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  .modal-privacidad-inner { max-height: 95vh; }
+  .modal-priv-contenido { padding: 1rem; }
+  .modal-priv-cabeceira { padding: 1rem; }
+}
+
+</style>
+</head>
+<body>
+
+<!-- CABECEIRA -->
+<header class="cabeceira">
+  <div class="cabeceira-banner">
+    <a href="#" class="marca">
+      <img class="marca-logo" src="data:image/png;base64,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" alt="PermuGal · Permutas docentes de Galicia">
+    </a>
+
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-inner">
+    <div>
+      <h1>Buscador de <strong>permutas docentes</strong><br>en Galicia</h1>
+      <p class="hero-desc">Conectamos a profesores que quieren intercambiar destino. Busca por cuerpo, especialidad y concello, publica tu oferta y contacta de forma sencilla.</p>
+      <p style="margin-top:0.6rem;font-size:0.78rem;opacity:0.6;font-weight:300;letter-spacing:0.3px;">Desarrollado por <strong style="font-weight:600;opacity:1;">@maestro.armero</strong></p>
+      <p style="margin-top:0.65rem;font-size:0.82rem;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);border-radius:2px;padding:0.5rem 0.85rem;line-height:1.55;">
+        🚧 <strong style="font-weight:700;">Versión en pruebas</strong> — Esta aplicación está en desarrollo activo y mejora continua. Tu experiencia y sugerencias son bienvenidas: escríbenos a <a href="mailto:maestroarmero77@gmail.com" style="color:rgba(255,255,255,0.9);text-decoration:underline;">maestroarmero77@gmail.com</a>
+      </p>
+    </div>
+    <div class="hero-stats">
+      <div class="stat">
+        <span class="stat-num" id="totalPermutas">137</span>
+        <span class="stat-label">Permutas activas</span>
+      </div>
+      <div class="stat">
+        <span class="stat-num">313</span>
+        <span class="stat-label">Concellos</span>
+      </div>
+      <div class="stat">
+        <span class="stat-num">4</span>
+        <span class="stat-label">Provincias</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- MAIN -->
+<main class="main">
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('buscar')">Buscar permutas</button>
+    <button class="tab" onclick="switchTab('mapa')">Buscar en mapa</button>
+    <button class="tab" onclick="switchTab('p3')">🔗 Permutas a 3</button>
+    <button class="tab" onclick="switchTab('publicar')">Publicar oferta</button>
+  </div>
+
+  <!-- PANEL BUSCAR -->
+  <div id="panel-buscar" class="panel active">
+
+    <div class="tarxeta">
+      <div class="tarxeta-titulo">Filtros de búsqueda</div>
+      <div class="filtros-rexilla">
+
+        <div class="campo">
+          <span class="etiqueta">Cuerpo</span>
+          <select id="f-cuerpo" onchange="actualizarEspecialidades('f-cuerpo','f-especialidad')">
+            <option value="">Todos los cuerpos</option>
+            <option>Maestros (590)</option>
+            <option>Secundaria (590)</option>
+            <option>FP (591)</option>
+            <option>Idiomas (592)</option>
+            <option>Artes Plásticas (593)</option>
+            <option>Música y Danza (594)</option>
+            <option>Inspección</option>
+          </select>
+        </div>
+
+        <div class="campo">
+          <span class="etiqueta">Especialidad</span>
+          <select id="f-especialidad">
+            <option value="">Todas las especialidades</option>
+          </select>
+        </div>
+
+        <div class="campo">
+          <span class="etiqueta">Provincia que ofrece</span>
+          <select id="f-ofrece-prov" onchange="actualizarConcellos('f-ofrece-prov','f-ofrece-concello')">
+            <option value="">Cualquier provincia</option>
+            <option>A Coruña</option><option>Lugo</option><option>Ourense</option><option>Pontevedra</option>
+          </select>
+        </div>
+
+        <div class="campo">
+          <span class="etiqueta">Concello que ofrece</span>
+          <select id="f-ofrece-concello" disabled>
+            <option value="">— Elige provincia primero —</option>
+          </select>
+        </div>
+
+        <div class="filtros-fila-dupla">
+          <div class="campo">
+            <span class="etiqueta">Provincia que busca</span>
+            <select id="f-busca-prov" onchange="actualizarMultiConcellos('f-busca-prov','ms-busca')">
+              <option value="">Cualquier provincia</option>
+              <option>A Coruña</option><option>Lugo</option><option>Ourense</option><option>Pontevedra</option>
+            </select>
+          </div>
+          <div class="campo">
+            <span class="etiqueta">Concellos que busca <span class="etiqueta-sub">(varios)</span></span>
+            <div class="ms-envolta" id="ms-busca-wrap">
+              <button type="button" class="ms-trigger" id="ms-busca-trigger" onclick="toggleMs('ms-busca')" disabled>— Elige provincia primero —</button>
+              <div class="ms-desplegable" id="ms-busca">
+                <div class="ms-busca-envolta"><input class="ms-busca-inp" type="text" placeholder="Buscar concello…" oninput="filtrarMs('ms-busca',this.value)"></div>
+                <div class="ms-accions">
+                  <button class="ms-btn-accion" onclick="selectTodosMs('ms-busca')">Seleccionar todos</button>
+                  <button class="ms-btn-accion" onclick="limparMs('ms-busca')">Limpiar</button>
+                </div>
+                <div class="ms-lista" id="ms-busca-lista"></div>
+              </div>
+              <div class="ms-etiquetas" id="ms-busca-etiquetas"></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+      <div class="botones-fila">
+        <button class="btn-primario" onclick="buscar()">Buscar</button>
+        <button class="btn-secundario" onclick="limparFiltros()">Limpiar filtros</button>
+      </div>
+    </div>
+
+    <div class="resultados-cab">
+      <p class="resultados-conta" id="resultados-conta">Mostrando <strong>12</strong> permutas activas</p>
+    </div>
+
+    <div class="reixilla-resultados" id="reixilla-resultados"></div>
+  </div>
+
+
+  <!-- PANEL MAPA -->
+  <div id="panel-mapa" class="panel">
+    <div class="tarxeta" style="margin-bottom:1rem;padding:1rem 1.25rem;">
+      <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+        <div class="campo" style="flex:1;min-width:180px;">
+          <span class="etiqueta">Cuerpo</span>
+          <select id="m-cuerpo" onchange="actualizarEspecialidades('m-cuerpo','m-especialidad');filtrarMapa()">
+            <option value="">Todos los cuerpos</option>
+            <option>Maestros (590)</option><option>Secundaria (590)</option><option>FP (591)</option>
+            <option>Idiomas (592)</option><option>Artes Plásticas (593)</option>
+            <option>Música y Danza (594)</option><option>Inspección</option>
+          </select>
+        </div>
+        <div class="campo" style="flex:1;min-width:200px;">
+          <span class="etiqueta">Especialidad</span>
+          <select id="m-especialidad" onchange="filtrarMapa()" disabled>
+            <option value="">— Elige cuerpo primero —</option>
+          </select>
+        </div>
+        <div style="font-size:0.82rem;color:var(--texto-suave);padding-top:1.2rem;">
+          📍 Haz clic en un pin para ver los detalles
+        </div>
+      </div>
+    </div>
+    <div class="mapa-layout">
+      <div class="mapa-sidebar">
+        <div class="mapa-conta" id="mapa-conta">Mostrando <strong>0</strong> permutas</div>
+        <div class="mapa-resultados-lista" id="mapa-lista"></div>
+      </div>
+      <div id="mapa-contenedor"></div>
+    </div>
+  </div>
+
+
+  <!-- PANEL PERMUTA A 3 -->
+  <div id="panel-p3" class="panel">
+
+    <!-- FORMULARIO MI SITUACIÓN -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:1.5rem;" class="p3-form-grid">
+
+      <div style="background:var(--blanco);border:1px solid var(--borde);border-radius:2px;padding:1.5rem;">
+        <div class="seccion-titulo" style="margin-bottom:1rem;">📍 Mi destino actual — ofrezco</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.85rem;">
+          <div class="campo" style="grid-column:1/-1">
+            <span class="etiqueta">Cuerpo</span>
+            <select id="p3-mi-cuerpo" onchange="actualizarEspecialidades('p3-mi-cuerpo','p3-mi-esp')">
+              <option value="">Selecciona cuerpo…</option>
+              <option>Maestros (590)</option><option>Secundaria (590)</option><option>FP (591)</option>
+              <option>Idiomas (592)</option><option>Artes Plásticas (593)</option><option>Música y Danza (594)</option><option>Inspección</option>
+            </select>
+          </div>
+          <div class="campo">
+            <span class="etiqueta">Especialidad</span>
+            <select id="p3-mi-esp" disabled>
+              <option value="">— Elige cuerpo primero —</option>
+            </select>
+          </div>
+          <div class="campo">
+            <span class="etiqueta">Provincia</span>
+            <select id="p3-mi-prov" onchange="actualizarConcellos('p3-mi-prov','p3-mi-concello')">
+              <option value="">Selecciona…</option>
+              <option>A Coruña</option><option>Lugo</option><option>Ourense</option><option>Pontevedra</option>
+            </select>
+          </div>
+          <div class="campo" style="grid-column:1/-1">
+            <span class="etiqueta">Concello</span>
+            <select id="p3-mi-concello" disabled><option value="">— Elige provincia —</option></select>
+          </div>
+        </div>
+      </div>
+
+      <div style="background:var(--blanco);border:1px solid var(--borde);border-radius:2px;padding:1.5rem;">
+        <div class="seccion-titulo" style="margin-bottom:1rem;">🎯 Destino deseado — busco</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.85rem;">
+          <div class="campo">
+            <span class="etiqueta">Provincia</span>
+            <select id="p3-busca-prov" onchange="actualizarMultiConcellos('p3-busca-prov','ms-p3busca')">
+              <option value="">Selecciona…</option>
+              <option>A Coruña</option><option>Lugo</option><option>Ourense</option><option>Pontevedra</option>
+            </select>
+          </div>
+          <div class="campo">
+            <span class="etiqueta">Concellos <span class="etiqueta-sub">(varios)</span></span>
+            <div class="ms-envolta" id="ms-p3busca-wrap">
+              <button type="button" class="ms-trigger" id="ms-p3busca-trigger" onclick="toggleMs('ms-p3busca')" disabled>— Elige provincia —</button>
+              <div class="ms-desplegable" id="ms-p3busca">
+                <div class="ms-busca-envolta"><input class="ms-busca-inp" type="text" placeholder="Buscar concello…" oninput="filtrarMs('ms-p3busca',this.value)"></div>
+                <div class="ms-accions">
+                  <button class="ms-btn-accion" onclick="selectTodosMs('ms-p3busca')">Todos</button>
+                  <button class="ms-btn-accion" onclick="limparMs('ms-p3busca')">Limpiar</button>
+                </div>
+                <div class="ms-lista" id="ms-p3busca-lista"></div>
+              </div>
+              <div class="ms-etiquetas" id="ms-p3busca-etiquetas"></div>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:1rem;">
+          <button class="btn-primario" onclick="buscarP3Personalizado()" style="width:100%;justify-content:center;">
+            🔗 Buscar permutas a 3 para mí
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- AVISO -->
+    <div class="p3-aviso" id="p3-aviso" style="display:none;"></div>
+
+    <!-- RESULTADOS -->
+    <p class="p3-conta" id="p3-conta" style="display:none;"></p>
+    <div class="p3-grid" id="p3-grid"></div>
+
+  </div>
+
+  <!-- PANEL PUBLICAR -->
+  <div id="panel-publicar" class="panel">
+    <div class="form-tarxeta">
+      <div class="form-titulo">Publicar mi permuta</div>
+
+      <div style="background:var(--azul-10);border-left:4px solid var(--azul);border-radius:2px;padding:1rem 1.25rem;margin-bottom:1.5rem;line-height:1.65;font-size:0.9rem;">
+        <p style="font-weight:700;color:var(--azul-oscuro);margin-bottom:0.4rem;">🔒 Tu privacidad es lo primero</p>
+        <p style="color:var(--texto);margin-bottom:0.3rem;">Para publicar una permuta <strong>solo son obligatorios el correo electrónico y las localidades</strong> de origen y destino. No es necesario incluir tu nombre ni apellidos.</p>
+        <p style="color:var(--texto-suave);font-size:0.83rem;">El correo electrónico es necesario para que otros docentes puedan contactarte, pero <strong>no tienes que usar tu email corporativo</strong>. Puedes utilizar cualquier otra cuenta de correo que prefieras.</p>
+      </div>
+
+      <div class="seccion">
+        <div class="seccion-titulo">Datos personales y docentes</div>
+        <div class="form-reixilla">
+          <div class="campo"><span class="etiqueta">Nombre o alias <span class="etiqueta-sub">(opcional)</span></span><input type="text" id="p-nome" placeholder="Ej: Docente de Lugo, o déjalo vacío"></div>
+          <div class="campo"><span class="etiqueta">Correo electrónico</span><input type="text" id="p-email" placeholder="correo@dominio.es"></div>
+          <div class="campo">
+            <span class="etiqueta">Cuerpo</span>
+            <select id="p-cuerpo" onchange="actualizarEspecialidades('p-cuerpo','p-especialidad')">
+              <option value="">Selecciona cuerpo…</option>
+              <option>Maestros (590)</option><option>Secundaria (590)</option><option>FP (591)</option>
+              <option>Idiomas (592)</option><option>Artes Plásticas (593)</option><option>Música y Danza (594)</option><option>Inspección</option>
+            </select>
+          </div>
+          <div class="campo">
+            <span class="etiqueta">Especialidad</span>
+            <select id="p-especialidad" disabled>
+              <option value="">— Elige cuerpo primero —</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="seccion">
+        <div class="seccion-titulo">Destino actual — ofrezco</div>
+        <div class="form-reixilla">
+          <div class="campo">
+            <span class="etiqueta">Provincia</span>
+            <select id="p-ofrece-prov" onchange="actualizarConcellos('p-ofrece-prov','p-ofrece-concello')">
+              <option value="">Selecciona provincia…</option>
+              <option>A Coruña</option><option>Lugo</option><option>Ourense</option><option>Pontevedra</option>
+            </select>
+          </div>
+          <div class="campo">
+            <span class="etiqueta">Concello</span>
+            <select id="p-ofrece-concello" disabled><option value="">— Elige provincia primero —</option></select>
+          </div>
+          <div class="campo campo-completo">
+            <span class="etiqueta">Centro educativo <span class="etiqueta-sub">(opcional)</span></span>
+            <input type="text" id="p-ofrece-centro" placeholder="Ej: IES Rosalía de Castro">
+          </div>
+        </div>
+      </div>
+
+      <div class="seccion">
+        <div class="seccion-titulo">Destino deseado — busco</div>
+        <div class="form-reixilla">
+          <div class="campo">
+            <span class="etiqueta">Provincia</span>
+            <select id="p-busca-prov" onchange="actualizarMultiConcellos('p-busca-prov','ms-pbusca')">
+              <option value="">Selecciona provincia…</option>
+              <option>A Coruña</option><option>Lugo</option><option>Ourense</option><option>Pontevedra</option>
+            </select>
+          </div>
+          <div class="campo">
+            <span class="etiqueta">Concellos <span class="etiqueta-sub">(puedes marcar varios)</span></span>
+            <div class="ms-envolta" id="ms-pbusca-wrap">
+              <button type="button" class="ms-trigger" id="ms-pbusca-trigger" onclick="toggleMs('ms-pbusca')" disabled>— Elige provincia primero —</button>
+              <div class="ms-desplegable" id="ms-pbusca">
+                <div class="ms-busca-envolta"><input class="ms-busca-inp" type="text" placeholder="Buscar concello…" oninput="filtrarMs('ms-pbusca',this.value)"></div>
+                <div class="ms-accions">
+                  <button class="ms-btn-accion" onclick="selectTodosMs('ms-pbusca')">Todos</button>
+                  <button class="ms-btn-accion" onclick="limparMs('ms-pbusca')">Limpiar</button>
+                </div>
+                <div class="ms-lista" id="ms-pbusca-lista"></div>
+              </div>
+              <div class="ms-etiquetas" id="ms-pbusca-etiquetas"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="seccion">
+        <div class="seccion-titulo">Información adicional</div>
+        <div class="form-reixilla completo">
+          <div class="campo">
+            <span class="etiqueta">Observaciones <span class="etiqueta-sub">(opcional)</span></span>
+            <textarea id="p-obs" placeholder="Ej: Acepto permuta provisional. Disponible desde septiembre. Prefiero zona urbana."></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="check-fila">
+        <input type="checkbox" id="p-privacidade">
+        <label class="check-label" for="p-privacidade">He leído y acepto la <a href="#politica-privacidad" onclick="event.preventDefault();abrirPrivacidad();" style="color:var(--azul);font-weight:600;">Política de Privacidad</a>. Acepto que los datos introducidos sean visibles en el buscador para facilitar la localización de permutas. El correo electrónico solo se mostrará en caso de contacto mutuo.</label>
+      </div>
+
+      <button class="btn-primario" onclick="publicar()" style="width:100%;justify-content:center;padding:0.9rem 1.75rem;font-size:1rem;">Publicar permuta</button>
+
+      <div class="aviso-exito" id="aviso-exito">
+        <span class="icona">✓</span>
+        <div>
+          <p>Permuta publicada correctamente</p>
+          <small>Tu oferta ya es visible en el buscador. Recibirás un aviso por correo cuando alguien muestre interés.</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- MODAL CONTACTO -->
+<div class="modal-fondo" id="modal-fondo" onclick="cerrarModal(event)">
+  <div class="modal">
+    <h3 id="modal-titulo">Contactar con el docente</h3>
+    <div class="modal-info" id="modal-info"></div>
+    <p class="modal-nota" style="margin-bottom:1rem;">Completa tus datos para que el docente pueda responderte. Se abrirá tu cliente de correo con el mensaje preparado.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1rem;">
+      <div class="campo">
+        <span class="etiqueta">Tu nombre</span>
+        <input type="text" id="contacto-nombre" placeholder="Ana García López">
+      </div>
+      <div class="campo">
+        <span class="etiqueta">Tu correo</span>
+        <input type="text" id="contacto-email" placeholder="tu@correo.es">
+      </div>
+      <div class="campo" style="grid-column:1/-1">
+        <span class="etiqueta">Mensaje <span class="etiqueta-sub">(opcional)</span></span>
+        <textarea id="contacto-mensaje" style="min-height:70px" placeholder="Cuéntale tu situación, horarios, preferencias..."></textarea>
+      </div>
+    </div>
+    <div class="modal-pe">
+      <button class="btn-cerrar" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn-primario" onclick="enviarInteres()">✉️ Abrir correo</button>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <strong>PermuGal</strong> · Buscador de permutas para docentes de Galicia<br>
+  <small>Ferramenta de apoio. As permutas deben tramitarse oficialmente ante a Consellería de Educación e FP.</small><br>
+  <small style="margin-top:0.5rem;display:inline-block;">
+    <a href="#politica-privacidad" onclick="event.preventDefault();abrirPrivacidad();">Política de Privacidad</a>
+    &nbsp;·&nbsp;
+    <a href="mailto:maestroarmero77@gmail.com">Contacto</a>
+  </small>
+</footer>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-polylinedecorator@1.6.0/dist/leaflet.polylineDecorator.js"></script>
+<script>
+// =============================================
+// CONCELLOS DE GALICIA POR PROVINCIA
+// =============================================
+const CONCELLOS = {
+  "A Coruña": ["Abegondo","Ames","Aranga","Ares","Arteixo","Arzúa","Baña (A)","Bergondo","Betanzos","Boimorto","Boiro","Boqueixón","Brión","Cabana de Bergantiños","Cabanas","Camariñas","Cambre","Capela (A)","Carballo","Cariño","Carnota","Carral","Cedeira","Cee","Cerceda","Cerdido","Coirós","Corcubión","Coristanco","Coruña (A)","Culleredo","Curtis","Dodro","Dumbría","Fene","Ferrol","Fisterra","Laxe","Laracha (A)","Lousame","Malpica de Bergantiños","Mañón","Mazaricos","Melide","Mesía","Miño","Moeche","Mugardos","Muros","Muxía","Narón","Neda","Negreira","Noia","Oleiros","Ordes","Oroso","Ortigueira","Outes","Paderne","Padrón","Pino (O)","Pobra do Caramiñal (A)","Ponteceso","Pontedeume","Pontes de García Rodríguez (As)","Porto do Son","Rianxo","Ribeira","Rois","Sada","San Sadurniño","Santa Comba","Santiago de Compostela","Santiso","Sobrado","Somozas (As)","Teo","Toques","Tordoia","Touro","Trazo","Valdoviño","Vedra","Vilarmaior","Vilasantar","Vimianzo","Zas"],
+  "Lugo": ["Abadín","Alfoz","Antas de Ulla","Baleira","Baralla","Barreiros","Becerreá","Begonte","Bóveda","Burela","Carballedo","Castro de Rei","Castroverde","Cervantes","Cervo","Chantada","Corgo (O)","Cospeito","Folgoso do Courel","Fonsagrada (A)","Foz","Friol","Guitiriz","Guntín","Incio (O)","Láncara","Lourenzá","Lugo","Meira","Mondoñedo","Monforte de Lemos","Monterroso","Muras","Navia de Suarna","Negueira de Muñiz","Nogais (As)","Ourol","Outeiro de Rei","Palas de Rei","Pantón","Paradela","Páramo (O)","Pastoriza (A)","Pedrafita do Cebreiro","Pobra do Brollón (A)","Pol","Pontenova (A)","Portomarín","Quiroga","Ribas de Sil","Ribeira de Piquín","Riotorto","Samos","Sarria","Saviñao (O)","Sober","Taboada","Trabada","Triacastela","Valadouro (O)","Vicedo (O)","Vilalba","Viveiro","Xermade","Xove"],
+  "Ourense": ["Allariz","Amoeiro","Arnoia (A)","Avión","Baltar","Bande","Baños de Molgas","Barbadás","Barco de Valdeorras (O)","Beade","Beariz","Blancos (Os)","Boborás","Bola (A)","Bolo (O)","Calvos de Randín","Carballeda de Avia","Carballeda de Valdeorras","Carballiño (O)","Cartelle","Castrelo de Miño","Castrelo do Val","Castro Caldelas","Celanova","Cenlle","Chandrexa de Queixa","Coles","Cortegada","Cualedro","Entrimo","Esgos","Gomesende","Gudiña (A)","Irixo (O)","Larouco","Laza","Leiro","Lobeira","Lobios","Maceda","Manzaneda","Maside","Melón","Merca (A)","Mezquita (A)","Montederramo","Monterrei","Muíños","Nogueira de Ramuín","Oímbra","Ourense","Paderne de Allariz","Padrenda","Parada de Sil","Pereiro de Aguiar (O)","Peroxa (A)","Petín","Piñor","Pobra de Trives (A)","Pontedeva","Porqueira","Punxín","Quintela de Leirado","Rairiz de Veiga","Ramirás","Ribadavia","Riós","Rúa (A)","Rubiá","San Amaro","San Cibrao das Viñas","San Cristovo de Cea","San Xoán de Río","Sandiás","Sarreaus","Taboadela","Tearce","Toén","Trasmiras","Veiga (A)","Verea","Verín","Viana do Bolo","Vilamarín","Vilamartín de Valdeorras","Vilar de Barrio","Vilar de Santos","Vilardevós","Vilariño de Conso","Xinzo de Limia","Xunqueira de Ambía","Xunqueira de Espadanedo"],
+  "Pontevedra": ["Agolada","Arbo","Baiona","Barro","Bueu","Caldas de Reis","Cambados","Campo Lameiro","Cangas","Cañiza (A)","Catoira","Cerdedo-Cotobade","Covelo","Crecente","Cuntis","Dozón","Estrada (A)","Forcarei","Fornelos de Montes","Gondomar","Grove (O)","Guarda (A)","Illa de Arousa (A)","Lalín","Lama (A)","Marín","Meaño","Meis","Moaña","Mondariz","Mondariz-Balneario","Moraña","Mos","Neves (As)","Nigrán","Oia","Pazos de Borbén","Poio","Ponte Caldelas","Ponteareas","Pontevedra","Porriño (O)","Portas","Redondela","Ribadumia","Rodeiro","Rosal (O)","Salceda de Caselas","Salvaterra de Miño","Sanxenxo","Silleda","Soutomaior","Tomiño","Tui","Valga","Vigo","Vila de Cruces","Vilaboa","Vilagarcía de Arousa","Vilanova de Arousa"]
+};
+
+// Cores para avatares
+const CORES = ["#007bc4","#002b4a","#005a8e","#0093d6","#2a6496","#003d5c","#0066a2","#004f7c"];
+
+// =============================================
+// DATOS DE EXEMPLO
+// =============================================
+const permutas = [
+  { id:13, nome:"Mestre das Fragas", iniciais:"MD", cor:"#2a6496", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"A Coruña", ofrece_concello:"Coruña (A)", ofrece_centro:"", busca_prov:"A Coruña", busca_concellos:["Culleredo", "Cambre", "Oleiros"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:14, nome:"Mestra do Cabo", iniciais:"MD", cor:"#003d5c", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"A Coruña", ofrece_concello:"Cambre", ofrece_centro:"", busca_prov:"A Coruña", busca_concellos:["Coruña (A)"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:15, nome:"Docente da Ría", iniciais:"DD", cor:"#0066a2", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"Lugo", ofrece_concello:"Monforte de Lemos", ofrece_centro:"", busca_prov:"A Coruña", busca_concellos:["Coruña (A)", "Ferrol", "Narón"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:16, nome:"Mestre do Porto", iniciais:"MD", cor:"#004f7c", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"Pontevedra", ofrece_concello:"Grove (O)", ofrece_centro:"", busca_prov:"Pontevedra", busca_concellos:["Silleda", "Lalín", "Estrada (A)"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:17, nome:"Mestra do Faro", iniciais:"MD", cor:"#007bc4", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"A Coruña", ofrece_concello:"Zas", ofrece_centro:"", busca_prov:"A Coruña", busca_concellos:["Coruña (A)", "Santiago de Compostela", "Grove (O)", "Marín"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:18, nome:"Docente da Serra", iniciais:"DD", cor:"#002b4a", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"Pontevedra", ofrece_concello:"Bueu", ofrece_centro:"", busca_prov:"Lugo", busca_concellos:["Lugo", "Viveiro", "Burela"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:19, nome:"Mestre do Bosque", iniciais:"MD", cor:"#005a8e", cuerpo:"Maestros (590)", especialidad:"Música", ofrece_prov:"Ourense", ofrece_concello:"Pobra de Trives (A)", ofrece_centro:"", busca_prov:"A Coruña", busca_concellos:["Santiago de Compostela", "Silleda", "Lalín"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:20, nome:"Mestra da Praia", iniciais:"MD", cor:"#0093d6", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"Ourense", ofrece_concello:"Valdeorras (O Barco)", ofrece_centro:"", busca_prov:"Ourense", busca_concellos:["Ourense", "Santiago de Compostela", "Ponteceso"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:21, nome:"Docente do Castro", iniciais:"DD", cor:"#2a6496", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"A Coruña", ofrece_concello:"Ponteceso", ofrece_centro:"", busca_prov:"A Coruña", busca_concellos:["Carballo", "Coruña (A)", "Lugo", "Ourense"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:22, nome:"Mestre do Pazo", iniciais:"MD", cor:"#003d5c", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"Pontevedra", ofrece_concello:"Moaña", ofrece_centro:"", busca_prov:"Pontevedra", busca_concellos:["Pontevedra", "Vigo", "Marín"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:23, nome:"Mestra da Aldea", iniciais:"MD", cor:"#0066a2", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"Pontevedra", ofrece_concello:"Covelo", ofrece_centro:"", busca_prov:"Lugo", busca_concellos:["Chantada", "Lugo", "Ourense", "Monforte de Lemos"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:24, nome:"Docente do Campo", iniciais:"DD", cor:"#004f7c", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"Pontevedra", ofrece_concello:"Oia", ofrece_centro:"", busca_prov:"Pontevedra", busca_concellos:["Vigo", "Pontevedra", "Nigrán", "Cangas", "Moaña", "Redondela"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:25, nome:"Mestre da Veiga", iniciais:"MD", cor:"#007bc4", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"A Coruña", ofrece_concello:"Arteixo", ofrece_centro:"", busca_prov:"A Coruña", busca_concellos:["Carballo", "Coruña (A)", "Coristanco"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:26, nome:"Mestra do Prado", iniciais:"MD", cor:"#002b4a", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"A Coruña", ofrece_concello:"Arteixo", ofrece_centro:"", busca_prov:"A Coruña", busca_concellos:["Ferrol", "Narón", "Ortigueira"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:27, nome:"Docente da Fonte", iniciais:"DD", cor:"#005a8e", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"Pontevedra", ofrece_concello:"Pontevedra", ofrece_centro:"", busca_prov:"A Coruña", busca_concellos:["Ferrol", "Narón", "Coruña (A)", "Lugo"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:28, nome:"Mestre do Muíño", iniciais:"MD", cor:"#0093d6", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"Pontevedra", ofrece_concello:"Vigo", ofrece_centro:"", busca_prov:"Pontevedra", busca_concellos:["Vilagarcía de Arousa", "Vigo", "Redondela"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:29, nome:"Mestra do Penedo", iniciais:"MD", cor:"#2a6496", cuerpo:"Maestros (590)", especialidad:"Audición e Linguaxe", ofrece_prov:"Pontevedra", ofrece_concello:"Pontevedra", ofrece_centro:"", busca_prov:"Pontevedra", busca_concellos:["Porriño (O)", "Mos", "Redondela", "Ponteareas", "Tui"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:30, nome:"Docente da Lagoa", iniciais:"DD", cor:"#003d5c", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"Pontevedra", ofrece_concello:"Redondela", ofrece_centro:"", busca_prov:"A Coruña", busca_concellos:["Coruña (A)", "Santiago de Compostela", "Pontevedra"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:31, nome:"Mestre do Souto", iniciais:"MD", cor:"#0066a2", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"Ourense", ofrece_concello:"Carballiño (O)", ofrece_centro:"", busca_prov:"Ourense", busca_concellos:["Verín", "Xinzo de Limia", "Allariz"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:32, nome:"Mestra do Pinal", iniciais:"MD", cor:"#004f7c", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"A Coruña", ofrece_concello:"Pontedeume", ofrece_centro:"", busca_prov:"A Coruña", busca_concellos:["Coruña (A)", "Oleiros", "Sada", "Betanzos"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:33, nome:"Docente da Fraga", iniciais:"DD", cor:"#007bc4", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"Pontevedra", ofrece_concello:"Porriño (O)", ofrece_centro:"", busca_prov:"Ourense", busca_concellos:["Ourense", "Ribadavia", "Celanova", "Xinzo de Limia"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:34, nome:"Mestre do Agro", iniciais:"MD", cor:"#002b4a", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"Pontevedra", ofrece_concello:"Gondomar", ofrece_centro:"", busca_prov:"A Coruña", busca_concellos:["Ferrol", "Narón"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:35, nome:"Mestra da Leira", iniciais:"MD", cor:"#005a8e", cuerpo:"Maestros (590)", especialidad:"Inglés (primaria)", ofrece_prov:"A Coruña", ofrece_concello:"Porto do Son", ofrece_centro:"", busca_prov:"A Coruña", busca_concellos:["Muros", "Noia", "Brión", "Negreira"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:36, nome:"Docente do Camiño", iniciais:"DD", cor:"#0093d6", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"Pontevedra", ofrece_concello:"Vigo", ofrece_centro:"", busca_prov:"A Coruña", busca_concellos:["Coruña (A)", "Santiago de Compostela"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:37, nome:"Mestre da Ruta", iniciais:"MD", cor:"#2a6496", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"Pontevedra", ofrece_concello:"Gondomar", ofrece_centro:"", busca_prov:"A Coruña", busca_concellos:["Coruña (A)", "Santiago de Compostela"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:38, nome:"Mestra do Camiño", iniciais:"MD", cor:"#003d5c", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"Pontevedra", ofrece_concello:"Catoira", ofrece_centro:"", busca_prov:"A Coruña", busca_concellos:["Ribeira", "Pobra do Caramiñal (A)"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:39, nome:"Docente da Senda", iniciais:"DD", cor:"#0066a2", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"A Coruña", ofrece_concello:"Muxía", ofrece_centro:"", busca_prov:"A Coruña", busca_concellos:["Ferrol", "Narón", "Vilalba", "Viveiro"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:40, nome:"Mestre do Paso", iniciais:"MD", cor:"#004f7c", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"Pontevedra", ofrece_concello:"Marín", ofrece_centro:"", busca_prov:"A Coruña", busca_concellos:["Santiago de Compostela", "Silleda", "Monforte de Lemos"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:41, nome:"Mestra da Ponte", iniciais:"MD", cor:"#007bc4", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"Pontevedra", ofrece_concello:"Baiona", ofrece_centro:"", busca_prov:"A Coruña", busca_concellos:["Ferrol", "Narón", "Viveiro"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:42, nome:"Docente do Vao", iniciais:"DD", cor:"#002b4a", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"Pontevedra", ofrece_concello:"Redondela", ofrece_centro:"", busca_prov:"Pontevedra", busca_concellos:["Pontevedra", "Vigo", "Marín"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:43, nome:"Mestre da Barca", iniciais:"MD", cor:"#005a8e", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"Pontevedra", ofrece_concello:"Nigrán", ofrece_centro:"", busca_prov:"A Coruña", busca_concellos:["Coruña (A)", "Oleiros", "Sada", "Cambre", "Culleredo"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:44, nome:"Mestra do Barco", iniciais:"MD", cor:"#0093d6", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"A Coruña", ofrece_concello:"Betanzos", ofrece_centro:"", busca_prov:"A Coruña", busca_concellos:["Melide", "Santiago de Compostela", "Arzúa"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:45, nome:"Docente da Mar", iniciais:"DD", cor:"#2a6496", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"Pontevedra", ofrece_concello:"Guarda (A)", ofrece_centro:"", busca_prov:"Ourense", busca_concellos:["Xinzo de Limia", "Ourense", "Verín"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:46, nome:"Mestre da Vela", iniciais:"MD", cor:"#003d5c", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"A Coruña", ofrece_concello:"Carral", ofrece_centro:"", busca_prov:"A Coruña", busca_concellos:["Cambre", "Coruña (A)"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:47, nome:"Mestra do Vento", iniciais:"MD", cor:"#0066a2", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"A Coruña", ofrece_concello:"Ponteceso", ofrece_centro:"", busca_prov:"Ourense", busca_concellos:["Xinzo de Limia", "Noia", "Coruña (A)"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:48, nome:"Docente da Brétema", iniciais:"DD", cor:"#004f7c", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"Pontevedra", ofrece_concello:"Vilagarcía de Arousa", ofrece_centro:"", busca_prov:"A Coruña", busca_concellos:["Coruña (A)", "Santiago de Compostela"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:49, nome:"Mestre da Choiva", iniciais:"MD", cor:"#007bc4", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"A Coruña", ofrece_concello:"Camariñas", ofrece_centro:"", busca_prov:"A Coruña", busca_concellos:["Guitiriz", "Carballo", "Coruña (A)", "Ferrol"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:50, nome:"Mestra do Sol", iniciais:"MD", cor:"#002b4a", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"Pontevedra", ofrece_concello:"Vigo", ofrece_centro:"", busca_prov:"Pontevedra", busca_concellos:["Cangas", "Moaña", "Vigo"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:51, nome:"Docente da Lúa", iniciais:"DD", cor:"#005a8e", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"A Coruña", ofrece_concello:"Coruña (A)", ofrece_centro:"", busca_prov:"A Coruña", busca_concellos:["Coruña (A)", "Santiago de Compostela"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:52, nome:"Mestre das Estrelas", iniciais:"MD", cor:"#0093d6", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"Pontevedra", ofrece_concello:"Moaña", ofrece_centro:"", busca_prov:"A Coruña", busca_concellos:["Coruña (A)", "Ourense"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:53, nome:"Mestra do Ceo", iniciais:"MD", cor:"#2a6496", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"A Coruña", ofrece_concello:"Ribeira", ofrece_centro:"", busca_prov:"A Coruña", busca_concellos:["Boiro", "Ribeira"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:54, nome:"Docente da Terra", iniciais:"DD", cor:"#003d5c", cuerpo:"Maestros (590)", especialidad:"Ed. Física (primaria)", ofrece_prov:"Ourense", ofrece_concello:"Gudiña (A)", ofrece_centro:"", busca_prov:"Ourense", busca_concellos:["Ourense", "Pontevedra", "Ponteareas"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:55, nome:"Mestre do Granito", iniciais:"MD", cor:"#0066a2", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"A Coruña", ofrece_concello:"Culleredo", ofrece_centro:"", busca_prov:"A Coruña", busca_concellos:["Coruña (A)", "Santiago de Compostela"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:56, nome:"Mestra do Lousa", iniciais:"MD", cor:"#004f7c", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"Pontevedra", ofrece_concello:"Cangas", ofrece_centro:"", busca_prov:"A Coruña", busca_concellos:["Santiago de Compostela", "Vigo"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:57, nome:"Docente da Pedra", iniciais:"DD", cor:"#007bc4", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"Ourense", ofrece_concello:"Valdeorras (O Barco)", ofrece_centro:"", busca_prov:"Pontevedra", busca_concellos:["Pontevedra", "Vigo", "Tui", "Lalín", "Monforte de Lemos"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:58, nome:"Mestre do Carballo", iniciais:"MD", cor:"#002b4a", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"A Coruña", ofrece_concello:"Pontedeume", ofrece_centro:"", busca_prov:"Lugo", busca_concellos:["Lugo", "Monforte de Lemos"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:59, nome:"Mestra do Castiñeiro", iniciais:"MD", cor:"#005a8e", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"Pontevedra", ofrece_concello:"Redondela", ofrece_centro:"", busca_prov:"Pontevedra", busca_concellos:["Sanxenxo", "Grove (O)", "Pontevedra"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:60, nome:"Docente do Bidueiro", iniciais:"DD", cor:"#0093d6", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"Pontevedra", ofrece_concello:"Guarda (A)", ofrece_centro:"", busca_prov:"Pontevedra", busca_concellos:["Vigo", "Mos", "Tui", "Ourense", "Redondela"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:61, nome:"Mestre do Toxo", iniciais:"MD", cor:"#2a6496", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"Pontevedra", ofrece_concello:"Grove (O)", ofrece_centro:"", busca_prov:"Pontevedra", busca_concellos:["Vigo", "Pontevedra", "Redondela"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:62, nome:"Mestra da Xesta", iniciais:"MD", cor:"#003d5c", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"Pontevedra", ofrece_concello:"Guarda (A)", ofrece_centro:"", busca_prov:"Pontevedra", busca_concellos:["Ponteareas", "Mondariz", "Salvaterra de Miño", "Porriño (O)"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:63, nome:"Docente do Fentoiro", iniciais:"DD", cor:"#0066a2", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"A Coruña", ofrece_concello:"Ames", ofrece_centro:"", busca_prov:"Lugo", busca_concellos:["Monforte de Lemos", "Chantada", "Sarria"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:64, nome:"Mestre do Loureiro", iniciais:"MD", cor:"#004f7c", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"Lugo", ofrece_concello:"Fonsagrada (A)", ofrece_centro:"", busca_prov:"Lugo", busca_concellos:["Lugo", "Sarria", "Monforte de Lemos"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:65, nome:"Mestra do Salgueiro", iniciais:"MD", cor:"#007bc4", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"Pontevedra", ofrece_concello:"Tomiño", ofrece_centro:"", busca_prov:"Pontevedra", busca_concellos:["Pontevedra", "Redondela", "Vilagarcía de Arousa", "Silleda", "Lalín"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:66, nome:"Docente do Ameneiro", iniciais:"DD", cor:"#002b4a", cuerpo:"Maestros (590)", especialidad:"Música", ofrece_prov:"Pontevedra", ofrece_concello:"Mondariz", ofrece_centro:"", busca_prov:"Pontevedra", busca_concellos:["Silleda", "Lalín", "Estrada (A)", "Caldas de Reis"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:67, nome:"Mestre do Freixo", iniciais:"MD", cor:"#005a8e", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"A Coruña", ofrece_concello:"Carballo", ofrece_centro:"", busca_prov:"A Coruña", busca_concellos:["Ferrol", "Narón", "Fene"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:68, nome:"Mestra do Pradairo", iniciais:"MD", cor:"#0093d6", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"A Coruña", ofrece_concello:"Oroso", ofrece_centro:"", busca_prov:"A Coruña", busca_concellos:["Coruña (A)", "Betanzos", "Cambre", "Oleiros", "Culleredo"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:69, nome:"Docente do Cerdeiro", iniciais:"DD", cor:"#2a6496", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"Pontevedra", ofrece_concello:"Guarda (A)", ofrece_centro:"", busca_prov:"Pontevedra", busca_concellos:["Vigo", "Redondela", "Pontevedra"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:70, nome:"Mestre do Cereixo", iniciais:"MD", cor:"#003d5c", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"Pontevedra", ofrece_concello:"Tomiño", ofrece_centro:"", busca_prov:"A Coruña", busca_concellos:["Ferrol", "Narón", "Fene"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:71, nome:"Mestra do Maceira", iniciais:"MD", cor:"#0066a2", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"A Coruña", ofrece_concello:"Carballo", ofrece_centro:"", busca_prov:"A Coruña", busca_concellos:["Coruña (A)", "Santiago de Compostela", "Fonsagrada (A)"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:72, nome:"Docente do Pereiro", iniciais:"DD", cor:"#004f7c", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"A Coruña", ofrece_concello:"Carral", ofrece_centro:"", busca_prov:"A Coruña", busca_concellos:["Cerceda", "Ordes", "Tordoia"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:73, nome:"Mestre do Amenedo", iniciais:"MD", cor:"#007bc4", cuerpo:"Maestros (590)", especialidad:"Inglés (primaria)", ofrece_prov:"Lugo", ofrece_concello:"Xermade", ofrece_centro:"", busca_prov:"A Coruña", busca_concellos:["Ferrol", "Narón", "Neda", "Fene", "Pontedeume"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:74, nome:"Mestra da Silveira", iniciais:"MD", cor:"#002b4a", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"Pontevedra", ofrece_concello:"Tomiño", ofrece_centro:"", busca_prov:"Pontevedra", busca_concellos:["Pontevedra", "Marín", "Caldas de Reis", "Santiago de Compostela", "Lalín", "Lugo", "Ourense"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:75, nome:"Docente da Bouza", iniciais:"DD", cor:"#005a8e", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"Pontevedra", ofrece_concello:"Nigrán", ofrece_centro:"", busca_prov:"Pontevedra", busca_concellos:["Pontevedra", "Vigo", "Redondela"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:76, nome:"Mestre do Agredo", iniciais:"MD", cor:"#0093d6", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"A Coruña", ofrece_concello:"Carballo", ofrece_centro:"", busca_prov:"A Coruña", busca_concellos:["Santiago de Compostela", "Padrón", "Estrada (A)"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:77, nome:"Mestra do Curral", iniciais:"MD", cor:"#2a6496", cuerpo:"Maestros (590)", especialidad:"Ed. Física (primaria)", ofrece_prov:"Ourense", ofrece_concello:"Vilardevós", ofrece_centro:"", busca_prov:"A Coruña", busca_concellos:["Coruña (A)", "Ferrol", "Santiago de Compostela"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:78, nome:"Docente da Cortiña", iniciais:"DD", cor:"#003d5c", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"A Coruña", ofrece_concello:"Corcubión", ofrece_centro:"", busca_prov:"A Coruña", busca_concellos:["Arteixo", "Carballo", "Cerceda", "Ordes"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:79, nome:"Mestre do Eirado", iniciais:"MD", cor:"#0066a2", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"Pontevedra", ofrece_concello:"Nigrán", ofrece_centro:"", busca_prov:"Ourense", busca_concellos:["Ourense", "Ferrol", "Redondela"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:80, nome:"Mestra do Hórreo", iniciais:"MD", cor:"#004f7c", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"Pontevedra", ofrece_concello:"Mel", ofrece_centro:"", busca_prov:"Pontevedra", busca_concellos:["Pontevedra", "Marín", "Caldas de Reis"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:81, nome:"Docente do Galpón", iniciais:"DD", cor:"#007bc4", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"A Coruña", ofrece_concello:"Cuntis", ofrece_centro:"", busca_prov:"A Coruña", busca_concellos:["Ordes", "Oroso", "Coruña (A)"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:82, nome:"Mestre do Palleiro", iniciais:"MD", cor:"#002b4a", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"Pontevedra", ofrece_concello:"Tui", ofrece_centro:"", busca_prov:"Lugo", busca_concellos:["Lugo", "Coruña (A)"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:83, nome:"Mestra da Adega", iniciais:"MD", cor:"#005a8e", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"Pontevedra", ofrece_concello:"Vigo", ofrece_centro:"", busca_prov:"Ourense", busca_concellos:["Ourense", "Pontevedra"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:84, nome:"Docente da Fornela", iniciais:"DD", cor:"#0093d6", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"Lugo", ofrece_concello:"Chantada", ofrece_centro:"", busca_prov:"Ourense", busca_concellos:["Ourense", "Pontevedra"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:85, nome:"Mestre do Lagar", iniciais:"MD", cor:"#2a6496", cuerpo:"Maestros (590)", especialidad:"Audición e Linguaxe", ofrece_prov:"Pontevedra", ofrece_concello:"Pontevedra", ofrece_centro:"", busca_prov:"Pontevedra", busca_concellos:["Porriño (O)", "Mos", "Redondela", "Ponteareas", "Salceda de Caselas", "Tui"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:86, nome:"Mestra do Muíño", iniciais:"MD", cor:"#003d5c", cuerpo:"Maestros (590)", especialidad:"Educación Infantil", ofrece_prov:"A Coruña", ofrece_concello:"Carral", ofrece_centro:"", busca_prov:"A Coruña", busca_concellos:["Ferrol", "Narón", "Neda", "Fene", "Pontedeume"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:87, nome:"Docente da Fragua", iniciais:"DD", cor:"#0066a2", cuerpo:"Maestros (590)", especialidad:"Educación Infantil", ofrece_prov:"Lugo", ofrece_concello:"Ribadeo", ofrece_centro:"", busca_prov:"Lugo", busca_concellos:["Lugo", "Sarria", "Monforte de Lemos"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:88, nome:"Mestre do Ferrador", iniciais:"MD", cor:"#004f7c", cuerpo:"Maestros (590)", especialidad:"Educación Infantil", ofrece_prov:"Pontevedra", ofrece_concello:"Pontevedra", ofrece_centro:"", busca_prov:"Ourense", busca_concellos:["Ourense", "Ponteareas", "Cañiza (A)", "Salvaterra de Miño", "Arbo"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:89, nome:"Mestra do Tendeiro", iniciais:"MD", cor:"#007bc4", cuerpo:"Maestros (590)", especialidad:"Primaria (generalista)", ofrece_prov:"Pontevedra", ofrece_concello:"Vigo", ofrece_centro:"", busca_prov:"A Coruña", busca_concellos:["Coruña (A)", "Santiago de Compostela"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:90, nome:"Docente do Zoqueiro", iniciais:"DD", cor:"#002b4a", cuerpo:"Maestros (590)", especialidad:"Educación Infantil", ofrece_prov:"A Coruña", ofrece_concello:"Mazaricos", ofrece_centro:"", busca_prov:"A Coruña", busca_concellos:["Coruña (A)", "Carballo", "Santiago de Compostela"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:91, nome:"Mestre do Cesteiro", iniciais:"MD", cor:"#005a8e", cuerpo:"Maestros (590)", especialidad:"Educación Infantil", ofrece_prov:"A Coruña", ofrece_concello:"Tordoia", ofrece_centro:"", busca_prov:"Pontevedra", busca_concellos:["Pontevedra", "Santiago de Compostela", "Coruña (A)"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:92, nome:"Mestra da Fiandeira", iniciais:"MD", cor:"#0093d6", cuerpo:"Maestros (590)", especialidad:"Educación Infantil", ofrece_prov:"A Coruña", ofrece_concello:"Cabana de Bergantiños", ofrece_centro:"", busca_prov:"A Coruña", busca_concellos:["Coruña (A)", "Santiago de Compostela"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:93, nome:"Docente do Tecedor", iniciais:"DD", cor:"#2a6496", cuerpo:"Maestros (590)", especialidad:"Educación Infantil", ofrece_prov:"Ourense", ofrece_concello:"Valdeorras (O Barco)", ofrece_centro:"", busca_prov:"Ourense", busca_concellos:["Ourense", "Ribeiro (O)", "Carballiño (O)", "Xinzo de Limia", "Verín", "Allariz", "Celanova"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:94, nome:"Mestre do Canteiro", iniciais:"MD", cor:"#003d5c", cuerpo:"Maestros (590)", especialidad:"Educación Infantil", ofrece_prov:"A Coruña", ofrece_concello:"Dumbría", ofrece_centro:"", busca_prov:"A Coruña", busca_concellos:["Barbanza", "Ribeira", "Boiro", "Noia"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:95, nome:"Mestra do Pedreiro", iniciais:"MD", cor:"#0066a2", cuerpo:"Maestros (590)", especialidad:"Educación Infantil", ofrece_prov:"A Coruña", ofrece_concello:"Coruña (A)", ofrece_centro:"", busca_prov:"A Coruña", busca_concellos:["Santiago de Compostela", "Coruña (A)"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:96, nome:"Docente do Carpinteiro", iniciais:"DD", cor:"#004f7c", cuerpo:"Maestros (590)", especialidad:"Educación Infantil", ofrece_prov:"A Coruña", ofrece_concello:"Carnota", ofrece_centro:"", busca_prov:"A Coruña", busca_concellos:["Ferrol", "Narón", "Fene"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:97, nome:"Mestre do Mariñeiro", iniciais:"MD", cor:"#007bc4", cuerpo:"Maestros (590)", especialidad:"Educación Infantil", ofrece_prov:"A Coruña", ofrece_concello:"Camariñas", ofrece_centro:"", busca_prov:"A Coruña", busca_concellos:["Coruña (A)", "Oleiros", "Sada", "Arteixo", "Culleredo", "Cambre", "Betanzos", "Miño", "Pontedeume"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:98, nome:"Mestra da Redeira", iniciais:"MD", cor:"#002b4a", cuerpo:"Maestros (590)", especialidad:"Educación Infantil", ofrece_prov:"Pontevedra", ofrece_concello:"Grove (O)", ofrece_centro:"", busca_prov:"A Coruña", busca_concellos:["Coruña (A)", "Culleredo", "Cambre", "Oleiros", "Arteixo", "Betanzos", "Santiago de Compostela", "Estrada (A)"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:99, nome:"Docente do Percebeiro", iniciais:"DD", cor:"#005a8e", cuerpo:"Maestros (590)", especialidad:"Educación Infantil", ofrece_prov:"Pontevedra", ofrece_concello:"Mondariz", ofrece_centro:"", busca_prov:"A Coruña", busca_concellos:["Coruña (A)", "Santiago de Compostela", "Ferrol", "Narón", "Ordes", "Oroso"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:100, nome:"Mestre do Mariscador", iniciais:"MD", cor:"#0093d6", cuerpo:"Maestros (590)", especialidad:"Educación Infantil", ofrece_prov:"Pontevedra", ofrece_concello:"Marín", ofrece_centro:"", busca_prov:"Ourense", busca_concellos:["Ourense"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:101, nome:"Mestra da Marisqueira", iniciais:"MD", cor:"#2a6496", cuerpo:"Maestros (590)", especialidad:"Educación Infantil", ofrece_prov:"A Coruña", ofrece_concello:"Ordes", ofrece_centro:"", busca_prov:"A Coruña", busca_concellos:["Coruña (A)", "Santiago de Compostela", "Culleredo", "Oleiros"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:102, nome:"Docente do Labrego", iniciais:"DD", cor:"#003d5c", cuerpo:"Maestros (590)", especialidad:"Educación Infantil", ofrece_prov:"Pontevedra", ofrece_concello:"Ponteareas", ofrece_centro:"", busca_prov:"A Coruña", busca_concellos:["Barbanza", "Ribeira", "Boiro"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:103, nome:"Mestre do Gandeiro", iniciais:"MD", cor:"#0066a2", cuerpo:"Maestros (590)", especialidad:"Educación Infantil", ofrece_prov:"A Coruña", ofrece_concello:"Coruña (A)", ofrece_centro:"", busca_prov:"A Coruña", busca_concellos:["Coruña (A)", "Cambre", "Culleredo"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:104, nome:"Mestra da Viña", iniciais:"MD", cor:"#004f7c", cuerpo:"Maestros (590)", especialidad:"Educación Infantil", ofrece_prov:"Lugo", ofrece_concello:"Quiroga", ofrece_centro:"", busca_prov:"A Coruña", busca_concellos:["Coruña (A)", "Ferrol", "Narón"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:105, nome:"Docente do Viñedo", iniciais:"DD", cor:"#007bc4", cuerpo:"Maestros (590)", especialidad:"Educación Infantil", ofrece_prov:"A Coruña", ofrece_concello:"Carballo", ofrece_centro:"", busca_prov:"A Coruña", busca_concellos:["Coruña (A)", "Oleiros", "Sada", "Culleredo", "Cambre", "Betanzos", "Pontedeume", "Miño"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:106, nome:"Mestre da Adega", iniciais:"MD", cor:"#002b4a", cuerpo:"Maestros (590)", especialidad:"Educación Infantil", ofrece_prov:"Pontevedra", ofrece_concello:"Vigo", ofrece_centro:"", busca_prov:"Pontevedra", busca_concellos:["Cangas", "Moaña", "Bueu"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:107, nome:"Mestra do Viño", iniciais:"MD", cor:"#005a8e", cuerpo:"Maestros (590)", especialidad:"Educación Infantil", ofrece_prov:"Pontevedra", ofrece_concello:"Ponteareas", ofrece_centro:"", busca_prov:"Pontevedra", busca_concellos:["Redondela", "Mos", "Pontevedra", "Vigo"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:108, nome:"Docente do Augardente", iniciais:"DD", cor:"#0093d6", cuerpo:"Maestros (590)", especialidad:"Educación Infantil", ofrece_prov:"Pontevedra", ofrece_concello:"Barro", ofrece_centro:"", busca_prov:"Pontevedra", busca_concellos:["Pontevedra", "Poio"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:109, nome:"Mestre do Queixo", iniciais:"MD", cor:"#2a6496", cuerpo:"Maestros (590)", especialidad:"Educación Infantil", ofrece_prov:"A Coruña", ofrece_concello:"Carballo", ofrece_centro:"", busca_prov:"A Coruña", busca_concellos:["Oleiros", "Sada", "Culleredo", "Cambre", "Coruña (A)"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:110, nome:"Mestra do Pan", iniciais:"MD", cor:"#003d5c", cuerpo:"Maestros (590)", especialidad:"Educación Infantil", ofrece_prov:"A Coruña", ofrece_concello:"Camariñas", ofrece_centro:"", busca_prov:"A Coruña", busca_concellos:["Coruña (A)", "Santiago de Compostela", "Carballo"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:111, nome:"Docente da Empanada", iniciais:"DD", cor:"#0066a2", cuerpo:"Maestros (590)", especialidad:"Educación Infantil", ofrece_prov:"A Coruña", ofrece_concello:"Laxe", ofrece_centro:"", busca_prov:"A Coruña", busca_concellos:["Coruña (A)", "Carballo", "Arteixo", "Santiago de Compostela"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:112, nome:"Mestre do Caldo", iniciais:"MD", cor:"#004f7c", cuerpo:"Maestros (590)", especialidad:"Educación Infantil", ofrece_prov:"Pontevedra", ofrece_concello:"Salceda de Caselas", ofrece_centro:"", busca_prov:"A Coruña", busca_concellos:["Coruña (A)", "Santiago de Compostela", "Vigo"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:113, nome:"Mestre do Norte", iniciais:"MD", cor:"#007bc4", cuerpo:"Maestros (590)", especialidad:"Educación Infantil", ofrece_prov:"Lugo", ofrece_concello:"Pontenova (A)", ofrece_centro:"", busca_prov:"Lugo", busca_concellos:["Lugo", "Sarria", "Monforte de Lemos"], obs:"", email:"", fecha:"Mayo 2025" },
+  { id:114, nome:"Mestra do Sur", iniciais:"MD", cor:"#002b4a", cuerpo:"Maestros (590)", especialidad:"Educación Infantil", ofrece_prov:"A Coruña", ofrece_concello:"Dumbría", ofrece_centro:"", busca_prov:"Pontevedra", busca_concellos:["Vigo", "Pontevedra", "Mos", "Porriño (O)", "Ponteareas", "Tui", "Salceda de Caselas", "Vilaboa"], obs:"", email:"", fecha:"Mayo 2025" },
+  // ── MÚSICA (Mayo 2025) ──
+  { id:115, nome:"Docente PA", iniciais:"PA", cor:"#007bc4", cuerpo:"Maestros (590)", especialidad:"Música", ofrece_prov:"A Coruña", ofrece_concello:"Arteixo", ofrece_centro:"CEIP Ponte dos Brozos", busca_prov:"Pontevedra", busca_concellos:["Pontevedra", "Vigo", "Marín", "Cangas"], obs:"Solo se imparte clase de música (sin tutoría). Horario 9:30-14:30. Aula equipada con mucho material.", email:"", fecha:"Mayo 2025" },
+  { id:116, nome:"Docente PR", iniciais:"PR", cor:"#002b4a", cuerpo:"Maestros (590)", especialidad:"Música", ofrece_prov:"Pontevedra", ofrece_concello:"Porriño (O)", ofrece_centro:"CEIP Plurilingüe da Ribeira", busca_prov:"A Coruña", busca_concellos:["Coruña (A)", "Carballo", "Fene"], obs:"Colexio dunha línea. Daría música e ciencias para completar horario. Coruña, Carballo ou zona da Costa da Monte.", email:"", fecha:"Mayo 2025" },
+  { id:117, nome:"Docente VB", iniciais:"VB", cor:"#005a8e", cuerpo:"Maestros (590)", especialidad:"Música", ofrece_prov:"Ourense", ofrece_concello:"Vilar de Barrio", ofrece_centro:"CEIP Plurilingüe de Vilar de Barrio", busca_prov:"Pontevedra", busca_concellos:["Vigo", "Pontevedra", "Coruña (A)"], obs:"Centro a 15 minutos de Xinzo de Limia. Opción de permuta a 3 por un cole de Coruña cidade.", email:"", fecha:"Mayo 2025" },
+  { id:118, nome:"Docente PT", iniciais:"PT", cor:"#0093d6", cuerpo:"Maestros (590)", especialidad:"Música", ofrece_prov:"Ourense", ofrece_concello:"Pobra de Trives (A)", ofrece_centro:"CEIP Plurilingüe Manuel Bermúdez Couso", busca_prov:"A Coruña", busca_concellos:["Santiago de Compostela", "Lugo", "Sarria"], obs:"Plaza de Música Primaria xunto con Arts para completar horario. Viaxable dende Trives. Inglés.", email:"", fecha:"Mayo 2025" },
+  { id:119, nome:"Docente CF", iniciais:"CF", cor:"#2a6496", cuerpo:"Maestros (590)", especialidad:"Música", ofrece_prov:"A Coruña", ofrece_concello:"Carballo", ofrece_centro:"CEIP Fogar", busca_prov:"Lugo", busca_concellos:["Lugo", "Sarria", "Monforte de Lemos"], obs:"Xornada única 9:30-14:30. A ser posible un centro de clase de mañá. Definitiva.", email:"", fecha:"Mayo 2025" },
+  { id:120, nome:"Docente LP", iniciais:"LP", cor:"#003d5c", cuerpo:"Maestros (590)", especialidad:"Música", ofrece_prov:"Lugo", ofrece_concello:"Lugo", ofrece_centro:"CEIP A Ponte", busca_prov:"Lugo", busca_concellos:["Lugo", "Sarria", "Monforte de Lemos"], obs:"Non se cubre horario con música polo que é preciso completar con outras materias. Lugo capital ou arredores.", email:"", fecha:"Mayo 2025" },
+  { id:121, nome:"Docente OV", iniciais:"OV", cor:"#0066a2", cuerpo:"Maestros (590)", especialidad:"Música", ofrece_prov:"Lugo", ofrece_concello:"Valadouro (O)", ofrece_centro:"CPI Plurilingüe Santa María do Valadouro", busca_prov:"Lugo", busca_concellos:["Viveiro", "Burela", "Foz", "Cervo"], obs:"O meu centro e xornada partida liña 1. Zona da mariña lucense. Definitiva. Inglés.", email:"", fecha:"Mayo 2025" },
+  { id:122, nome:"Docente SO", iniciais:"SO", cor:"#004f7c", cuerpo:"Maestros (590)", especialidad:"Música", ofrece_prov:"A Coruña", ofrece_concello:"Sobrado", ofrece_centro:"CPI Plurilingüe Virxe do Portal", busca_prov:"A Coruña", busca_concellos:["Coruña (A)", "Culleredo", "Cambre", "Oleiros", "Arteixo", "Sada", "Betanzos", "Carballo"], obs:"Propongo permuta provisional pero pode ser definitiva. Centro rural de pouco alumnado.", email:"", fecha:"Mayo 2025" },
+  { id:123, nome:"Docente MO", iniciais:"MO", cor:"#007bc4", cuerpo:"Maestros (590)", especialidad:"Música", ofrece_prov:"A Coruña", ofrece_concello:"Monfero", ofrece_centro:"CPI Plurilingüe Virxe da Cela", busca_prov:"Ourense", busca_concellos:["Ourense"], obs:"Xornada partida. Provincias de Pontevedra e preto de Ourense cidade.", email:"", fecha:"Mayo 2025" },
+  { id:124, nome:"Docente AR", iniciais:"AR", cor:"#002b4a", cuerpo:"Maestros (590)", especialidad:"Música", ofrece_prov:"A Coruña", ofrece_concello:"Ares", ofrece_centro:"CPI As Mirandas", busca_prov:"A Coruña", busca_concellos:["Santiago de Compostela", "Coruña (A)", "Ferrol", "Fonsagrada (A)"], obs:"Xornada continua. A 45 minutos de Santiago. Propongo permuta provisional. Tamén posible a 3.", email:"", fecha:"Mayo 2025" },
+  { id:125, nome:"Docente FP", iniciais:"FP", cor:"#005a8e", cuerpo:"Maestros (590)", especialidad:"Música", ofrece_prov:"A Coruña", ofrece_concello:"Ferrol", ofrece_centro:"CPI Plurilingüe de Ponzos", busca_prov:"A Coruña", busca_concellos:["Santiago de Compostela", "Coruña (A)"], obs:"Xornada única. Santiago de Compostela ou viaxable 30 min en coche. Boimorto e zona do Val Miñor.", email:"", fecha:"Mayo 2025" },
+  { id:126, nome:"Docente PO", iniciais:"PO", cor:"#0093d6", cuerpo:"Maestros (590)", especialidad:"Música", ofrece_prov:"Pontevedra", ofrece_concello:"Poio", ofrece_centro:"CPI Plurilingüe Isidora Riestra", busca_prov:"Pontevedra", busca_concellos:["Marín", "Pontevedra", "Vigo"], obs:"Algún centro máis próximo a Marín. Definitiva.", email:"", fecha:"Mayo 2025" },
+  { id:127, nome:"Docente FL", iniciais:"FL", cor:"#2a6496", cuerpo:"Maestros (590)", especialidad:"Música", ofrece_prov:"A Coruña", ofrece_concello:"Ferrol", ofrece_centro:"CEIP Ledicia", busca_prov:"A Coruña", busca_concellos:["Santiago de Compostela", "Coruña (A)", "Narón", "Fene"], obs:"Liña 1, horario de 9h-14h. Concellos da provincia de Pontevedra ou Santiago e arredores.", email:"", fecha:"Mayo 2025" },
+  { id:128, nome:"Docente MZ", iniciais:"MZ", cor:"#003d5c", cuerpo:"Maestros (590)", especialidad:"Música", ofrece_prov:"Pontevedra", ofrece_concello:"Mondariz", ofrece_centro:"CPI de Mondariz", busca_prov:"Pontevedra", busca_concellos:["Silleda", "Lalín", "Estrada (A)", "Cambados", "Vilagarcía de Arousa"], obs:"Permuto polas especialidades de Música e Ed. Primaria. Zona do Deza ou do Salnés e arredores.", email:"", fecha:"Mayo 2025" },
+  { id:129, nome:"Docente RI", iniciais:"RI", cor:"#0066a2", cuerpo:"Maestros (590)", especialidad:"Música", ofrece_prov:"Lugo", ofrece_concello:"Riotorto", ofrece_centro:"CPI Plurilingüe de Riotorto", busca_prov:"Pontevedra", busca_concellos:["Vigo", "Ponteareas", "Salvaterra de Miño", "Tui", "Cangas", "Bueu"], obs:"A 50 min de Lugo, 35 de Foz e 40 de Ribadeo. Vigo, Ponteareas, Tui, Tomiño, Baiona, Nigrán, Ourense, Cangas, Bueu.", email:"", fecha:"Mayo 2025" },
+  { id:130, nome:"Docente FX", iniciais:"FX", cor:"#004f7c", cuerpo:"Maestros (590)", especialidad:"Música", ofrece_prov:"A Coruña", ofrece_concello:"Fene", ofrece_centro:"CRA A Xunqueira", busca_prov:"A Coruña", busca_concellos:["Coruña (A)", "Culleredo", "Cambre", "Oleiros", "Carballo"], obs:"Centro liña 1, ratios reducidas, xornada continua 8:45-13:45, sen titoría. A 5 min de Ferrol e 30 de Coruña. Posibilidade permuta a 3.", email:"", fecha:"Mayo 2025" },
+  { id:131, nome:"Docente BV", iniciais:"BV", cor:"#007bc4", cuerpo:"Maestros (590)", especialidad:"Música", ofrece_prov:"Ourense", ofrece_concello:"Valdeorras (O Barco)", ofrece_centro:"CEP Plurilingüe Julio Guriarán Canalejas", busca_prov:"Pontevedra", busca_concellos:["Pontevedra", "Vigo", "Santiago de Compostela"], obs:"Centro con 5 unidades E1 e 12 de EP. Horario 9:15-14:15. Provincia de Pontevedra. Santiago ou arredores.", email:"", fecha:"Mayo 2025" },
+  { id:132, nome:"Docente CO", iniciais:"CO", cor:"#002b4a", cuerpo:"Maestros (590)", especialidad:"Música", ofrece_prov:"A Coruña", ofrece_concello:"Coristanco", ofrece_centro:"CPI Alcalde Xosé Pichel", busca_prov:"A Coruña", busca_concellos:["Santiago de Compostela", "Coruña (A)"], obs:"A 30 min de Coruña. Santiago ou arredores viaxable máx 40 min.", email:"", fecha:"Mayo 2025" },
+  { id:133, nome:"Docente MR", iniciais:"MR", cor:"#005a8e", cuerpo:"Maestros (590)", especialidad:"Música", ofrece_prov:"Ourense", ofrece_concello:"Monterrei", ofrece_centro:"CRA de Monterrei", busca_prov:"Pontevedra", busca_concellos:["Vigo", "Pontevedra", "Vilagarcía de Arousa"], obs:"3 escolas agrupadas: Pazos, Vences e Vilaza. A 45 min de Ourense, 21 min de Xinzo. Vigo e arredores, provincia de Pontevedra.", email:"", fecha:"Mayo 2025" },
+  { id:134, nome:"Docente CT", iniciais:"CT", cor:"#0093d6", cuerpo:"Maestros (590)", especialidad:"Música", ofrece_prov:"A Coruña", ofrece_concello:"Coristanco", ofrece_centro:"CRA A Tarandeira", busca_prov:"A Coruña", busca_concellos:["Santiago de Compostela", "Coruña (A)", "Vigo"], obs:"O CRA está formado por 7 escoliñas asociadas. Santiago, Vigo e viaxable de ambas ata 30 min.", email:"", fecha:"Mayo 2025" },
+  { id:135, nome:"Docente SM", iniciais:"SM", cor:"#2a6496", cuerpo:"Maestros (590)", especialidad:"Música", ofrece_prov:"A Coruña", ofrece_concello:"Somozas (As)", ofrece_centro:"CEIP O Marbán", busca_prov:"A Coruña", busca_concellos:["Ferrol", "Narón", "Fene", "Carballo"], obs:"Centro rural. Aulas mixtas por ciclos. Comedor. Zona do Salnés, o Barbanza ou próximas.", email:"", fecha:"Mayo 2025" },
+  { id:136, nome:"Docente CG", iniciais:"CG", cor:"#003d5c", cuerpo:"Maestros (590)", especialidad:"Música", ofrece_prov:"A Coruña", ofrece_concello:"Carballo", ofrece_centro:"CEIP Plurilingüe de Gándara-Sofán", busca_prov:"A Coruña", busca_concellos:["Coruña (A)", "Oleiros", "Cambre", "Culleredo"], obs:"Música e Arts (plástica en inglés). Coruña ciudad y alrededores. Definitiva. Inglés.", email:"", fecha:"Mayo 2025" },
+  { id:137, nome:"Docente CB", iniciais:"CB", cor:"#0066a2", cuerpo:"Maestros (590)", especialidad:"Música", ofrece_prov:"A Coruña", ofrece_concello:"Carballo", ofrece_centro:"CPI Bergantiños", busca_prov:"A Coruña", busca_concellos:["Coruña (A)", "Oleiros", "Cambre", "Culleredo", "Arteixo"], obs:"Non collín a praza xa que tiven a oportunidade de permutar. Concello de A Coruña e contorna (Oleiros, Cambre, Culleredo, Arteixo). O máis preto posible da cidade da Coruña.", email:"", fecha:"Mayo 2025" }
+];
+
+let modalActual = null;
+const msEstado = {};
+
+// =============================================
+// CONCELLO ÚNICO (desplegable encadenado)
+// =============================================
+function actualizarConcellos(provId, concelloId) {
+  const prov = document.getElementById(provId).value;
+  const sel = document.getElementById(concelloId);
+  sel.innerHTML = '';
+  if (!prov) {
+    sel.innerHTML = '<option value="">— Elige provincia primero —</option>';
+    sel.disabled = true;
+    return;
+  }
+  sel.disabled = false;
+  const o0 = document.createElement('option');
+  o0.value = ''; o0.textContent = 'Todos los concellos';
+  sel.appendChild(o0);
+  (CONCELLOS[prov] || []).forEach(c => {
+    const o = document.createElement('option');
+    o.value = c; o.textContent = c;
+    sel.appendChild(o);
+  });
+}
+
+// =============================================
+// MULTISELECT
+// =============================================
+function actualizarMultiConcellos(provId, msId) {
+  const prov = document.getElementById(provId).value;
+  const trigger = document.getElementById(msId+'-trigger');
+  const lista = document.getElementById(msId+'-lista');
+  msEstado[msId] = new Set();
+  renderEtiquetas(msId);
+  if (!prov) {
+    trigger.textContent = '— Elige provincia primero —';
+    trigger.disabled = true;
+    lista.innerHTML = '';
+    return;
+  }
+  trigger.disabled = false;
+  const concellos = CONCELLOS[prov] || [];
+  lista.innerHTML = concellos.map(c =>
+    `<label class="ms-elemento" data-val="${c}"><input type="checkbox" value="${c}" onchange="toggleMsItem('${msId}','${c}',this.checked)"><span>${c}</span></label>`
+  ).join('');
+  actualizarTrigger(msId);
+}
+
+function toggleMs(msId) {
+  const dd = document.getElementById(msId);
+  const trigger = document.getElementById(msId+'-trigger');
+  const aberto = dd.classList.contains('aberto');
+  document.querySelectorAll('.ms-desplegable.aberto').forEach(d => {
+    d.classList.remove('aberto');
+    const t = document.getElementById(d.id+'-trigger');
+    if (t) t.classList.remove('aberto');
+  });
+  if (!aberto) {
+    dd.classList.add('aberto');
+    trigger.classList.add('aberto');
+    dd.querySelector('.ms-busca-inp')?.focus();
+  }
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.ms-envolta')) {
+    document.querySelectorAll('.ms-desplegable.aberto').forEach(d => {
+      d.classList.remove('aberto');
+      const t = document.getElementById(d.id+'-trigger');
+      if (t) t.classList.remove('aberto');
+    });
+  }
+});
+
+function toggleMsItem(msId, val, checked) {
+  if (!msEstado[msId]) msEstado[msId] = new Set();
+  checked ? msEstado[msId].add(val) : msEstado[msId].delete(val);
+  actualizarTrigger(msId);
+  renderEtiquetas(msId);
+}
+
+function actualizarTrigger(msId) {
+  const trigger = document.getElementById(msId+'-trigger');
+  const sel = msEstado[msId] ? [...msEstado[msId]] : [];
+  if (sel.length === 0) {
+    trigger.textContent = 'Seleccionar concellos…';
+    trigger.classList.remove('ten-valores');
+  } else if (sel.length <= 2) {
+    trigger.textContent = sel.join(', ');
+    trigger.classList.add('ten-valores');
+  } else {
+    trigger.textContent = sel.length+' concellos seleccionados';
+    trigger.classList.add('ten-valores');
+  }
+}
+
+function renderEtiquetas(msId) {
+  const cont = document.getElementById(msId+'-etiquetas');
+  const sel = msEstado[msId] ? [...msEstado[msId]] : [];
+  cont.innerHTML = sel.map(v =>
+    `<span class="ms-etiqueta">${v}<span class="ms-etiqueta-x" onclick="quitarEtiqueta('${msId}','${v}')">✕</span></span>`
+  ).join('');
+}
+
+function quitarEtiqueta(msId, val) {
+  if (msEstado[msId]) msEstado[msId].delete(val);
+  const lista = document.getElementById(msId+'-lista');
+  const cb = lista?.querySelector(`input[value="${val}"]`);
+  if (cb) cb.checked = false;
+  actualizarTrigger(msId);
+  renderEtiquetas(msId);
+}
+
+function selectTodosMs(msId) {
+  if (!msEstado[msId]) msEstado[msId] = new Set();
+  document.querySelectorAll(`#${msId}-lista .ms-elemento:not(.oculto) input`).forEach(cb => {
+    cb.checked = true;
+    msEstado[msId].add(cb.value);
+  });
+  actualizarTrigger(msId);
+  renderEtiquetas(msId);
+}
+
+function limparMs(msId) {
+  msEstado[msId] = new Set();
+  document.getElementById(msId+'-lista')?.querySelectorAll('input').forEach(cb => cb.checked = false);
+  actualizarTrigger(msId);
+  renderEtiquetas(msId);
+}
+
+function filtrarMs(msId, q) {
+  const norm = q.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  document.querySelectorAll(`#${msId}-lista .ms-elemento`).forEach(el => {
+    const txt = el.dataset.val.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    el.classList.toggle('oculto', !txt.includes(norm));
+  });
+}
+
+// =============================================
+// BUSCAR
+// =============================================
+function buscar() {
+  const cuerpo = document.getElementById('f-cuerpo').value;
+  const esp = document.getElementById('f-especialidad').value;
+  const ofProv = document.getElementById('f-ofrece-prov').value;
+  const ofConc = document.getElementById('f-ofrece-concello').value;
+  const buProv = document.getElementById('f-busca-prov').value;
+  const buConcs = msEstado['ms-busca'] ? [...msEstado['ms-busca']] : [];
+
+  const filtradas = permutas.filter(p => {
+    if (cuerpo && p.cuerpo !== cuerpo) return false;
+    if (esp && p.especialidad !== esp) return false;
+    if (ofProv && p.ofrece_prov !== ofProv) return false;
+    if (ofConc && p.ofrece_concello !== ofConc) return false;
+    if (buProv && p.busca_prov !== buProv) return false;
+    if (buConcs.length > 0 && !buConcs.some(c => p.busca_concellos.includes(c))) return false;
+    return true;
+  });
+
+  renderCards(filtradas);
+}
+
+function limparFiltros() {
+  ['f-cuerpo','f-especialidad','f-ofrece-prov','f-busca-prov'].forEach(id => document.getElementById(id).value='');
+  actualizarConcellos('f-ofrece-prov','f-ofrece-concello');
+  limparMs('ms-busca');
+  const t = document.getElementById('ms-busca-trigger');
+  t.textContent = '— Elige provincia primero —';
+  t.disabled = true;
+  renderCards(permutas);
+}
+
+// =============================================
+// RENDER TARXETAS
+// =============================================
+function renderCards(lista) {
+  const grid = document.getElementById('reixilla-resultados');
+  const conta = document.getElementById('resultados-conta');
+  if (lista.length === 0) {
+    grid.innerHTML = `<div class="sen-resultados"><div class="icona">🔍</div><p>No se encontraron permutas con esos filtros.<br><small>Prueba cambiando algún criterio de búsqueda.</small></p></div>`;
+    conta.innerHTML = `<strong>0</strong> resultados`;
+    return;
+  }
+  conta.innerHTML = `Mostrando <strong>${lista.length}</strong> permuta${lista.length!==1?'s':''} activa${lista.length!==1?'s':''}`;
+  grid.innerHTML = lista.map(p => {
+    const busca = p.busca_concellos.slice(0,2).join(', ') + (p.busca_concellos.length > 2 ? ` +${p.busca_concellos.length-2}` : '');
+    return `
+    <div class="tarxeta-permuta" onclick="abrirModal(${p.id})">
+      <div class="tp-cabeceira">
+        <div class="tp-docente">
+          <div class="tp-avatar" style="background:${p.cor}">${p.iniciais}</div>
+          <div>
+            <div class="tp-nome">${p.nome}</div>
+            <div class="tp-meta">${p.cuerpo}</div>
+          </div>
+        </div>
+        <span class="tp-etiqueta">${p.especialidad}</span>
+      </div>
+      <div class="tp-destinos">
+        <div class="tp-destino">
+          <div class="tp-destino-etiqueta ofrece">Ofrece</div>
+          <div class="tp-destino-lugar">${p.ofrece_concello}</div>
+          <div class="tp-destino-prov">${p.ofrece_prov}</div>
+        </div>
+        <div class="tp-separador">⇄</div>
+        <div class="tp-destino">
+          <div class="tp-destino-etiqueta busca">Busca</div>
+          <div class="tp-destino-lugar">${busca}</div>
+          <div class="tp-destino-prov">${p.busca_prov}</div>
+        </div>
+      </div>
+      ${p.obs ? `<div class="tp-obs">${p.obs.substring(0,95)}${p.obs.length>95?'…':''}</div>` : ''}
+      <div class="tp-pe">
+        <span class="tp-data">Publicado ${p.fecha}</span>
+        <button class="btn-contactar" onclick="event.stopPropagation();abrirModal(${p.id})">Contactar</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// =============================================
+// MODAL
+// =============================================
+function abrirModal(id) {
+  const p = permutas.find(x => x.id === id);
+  modalActual = p;
+  document.getElementById('modal-titulo').textContent = `Contactar con ${p.nome}`;
+  document.getElementById('modal-info').innerHTML = `
+    <p><strong>Docente:</strong> ${p.nome}</p>
+    <p><strong>Cuerpo / Especialidad:</strong> ${p.cuerpo} · ${p.especialidad}</p>
+    <p><strong>Ofrece:</strong> ${p.ofrece_centro ? p.ofrece_centro+', ' : ''}${p.ofrece_concello} (${p.ofrece_prov})</p>
+    <p><strong>Busca:</strong> ${p.busca_concellos.join(', ')} (${p.busca_prov})</p>
+    ${p.obs ? `<p><strong>Observaciones:</strong> ${p.obs}</p>` : ''}
+  `;
+  document.getElementById('modal-fondo').classList.add('mostrar');
+}
+
+function cerrarModal(e) {
+  if (!e || e.target === document.getElementById('modal-fondo')) {
+    document.getElementById('modal-fondo').classList.remove('mostrar');
+  }
+}
+
+function enviarInteres() {
+  const nombre  = document.getElementById('contacto-nombre').value.trim();
+  const miEmail = document.getElementById('contacto-email').value.trim();
+  const mensaje = document.getElementById('contacto-mensaje').value.trim();
+
+  if (!nombre || !miEmail) {
+    document.getElementById('contacto-nombre').style.borderColor = nombre ? '' : 'red';
+    document.getElementById('contacto-email').style.borderColor  = miEmail ? '' : 'red';
+    return;
+  }
+
+  const p = modalActual;
+  const destinatario = p.email || '';
+
+  const asunto = encodeURIComponent(
+    `PermuGal · Interés en permuta · ${p.especialidad} · ${p.ofrece_concello}`
+  );
+
+  const cuerpoEmail = encodeURIComponent(
+`Hola,
+
+Me pongo en contacto a través de PermuGal porque me interesa tu permuta.
+
+Mi situación:
+- Nombre: ${nombre}
+- Correo: ${miEmail}
+${mensaje ? '- Mensaje: ' + mensaje : ''}
+
+Tu permuta publicada:
+- Especialidad: ${p.especialidad} (${p.cuerpo})
+- Ofreces: ${p.ofrece_centro ? p.ofrece_centro + ', ' : ''}${p.ofrece_concello} (${p.ofrece_prov})
+- Buscas: ${p.busca_concellos.join(', ')} (${p.busca_prov})
+${p.obs ? '- Observaciones: ' + p.obs : ''}
+
+Quedo a tu disposición para hablar y ver si encajamos.
+
+Un saludo,
+${nombre}
+${miEmail}`
+  );
+
+  if (!destinatario) {
+    const centro = p.ofrece_centro || 'su centro educativo';
+    document.getElementById('modal-fondo').classList.remove('mostrar');
+    alert(`⚠️ Este docente no tiene correo electrónico registrado.\n\nTe recomendamos contactar directamente con su centro educativo:\n📍 ${centro}, ${p.ofrece_concello} (${p.ofrece_prov})`);
+    return;
+  }
+
+  const mailtoUrl = `mailto:${destinatario}?subject=${asunto}&body=${cuerpoEmail}`;
+  window.location.href = mailtoUrl;
+
+  // Reset and close
+  setTimeout(() => {
+    document.getElementById('modal-fondo').classList.remove('mostrar');
+    document.getElementById('contacto-nombre').value = '';
+    document.getElementById('contacto-email').value  = '';
+    document.getElementById('contacto-mensaje').value = '';
+    document.getElementById('contacto-nombre').style.borderColor = '';
+    document.getElementById('contacto-email').style.borderColor  = '';
+  }, 300);
+}
+
+// =============================================
+// TABS
+// =============================================
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    t.classList.toggle('active',
+      (i===0&&tab==='buscar')||(i===1&&tab==='mapa')||(i===2&&tab==='p3')||(i===3&&tab==='publicar'));
+  });
+  document.getElementById('panel-buscar').classList.toggle('active', tab==='buscar');
+  document.getElementById('panel-mapa').classList.toggle('active', tab==='mapa');
+  document.getElementById('panel-p3').classList.toggle('active', tab==='p3');
+  document.getElementById('panel-publicar').classList.toggle('active', tab==='publicar');
+  if (tab==='mapa') initMapa();
+  if (tab==='p3') renderP3();
+}
+
+// =============================================
+// PUBLICAR
+// =============================================
+function publicar() {
+  const nomeInput = document.getElementById('p-nome').value.trim();
+  const email = document.getElementById('p-email').value.trim();
+  const cuerpo = document.getElementById('p-cuerpo').value;
+  const esp = document.getElementById('p-especialidad').value;
+  const ofProv = document.getElementById('p-ofrece-prov').value;
+  const ofConc = document.getElementById('p-ofrece-concello').value;
+  const buProv = document.getElementById('p-busca-prov').value;
+  const buConcs = msEstado['ms-pbusca'] ? [...msEstado['ms-pbusca']] : [];
+  const privacidade = document.getElementById('p-privacidade').checked;
+
+  if (!email||!cuerpo||!esp||!ofProv||!ofConc||!buProv||buConcs.length===0||!privacidade) {
+    alert('Por favor, rellena los campos obligatorios (correo, cuerpo, especialidad, localidades) y acepta la política de privacidad.');
+    return;
+  }
+
+  // Si no pone nombre, generar alias automático
+  const nome = nomeInput || `Docente de ${ofConc}`;
+  const iniciais = nomeInput
+    ? nomeInput.split(' ').slice(0,2).map(n=>n[0]).join('').toUpperCase()
+    : ofConc.slice(0,2).toUpperCase();
+
+  const nueva = {
+    id: permutas.length+1,
+    nome, iniciais,
+    cor: CORES[permutas.length % CORES.length],
+    cuerpo, especialidad: esp,
+    ofrece_prov: ofProv, ofrece_concello: ofConc,
+    ofrece_centro: document.getElementById('p-ofrece-centro').value || '',
+    busca_prov: buProv, busca_concellos: buConcs,
+    obs: document.getElementById('p-obs').value,
+    email, fecha: 'hace un momento'
+  };
+  permutas.unshift(nueva);
+  document.getElementById('totalPermutas').textContent = permutas.length;
+  document.getElementById('aviso-exito').classList.add('mostrar');
+  document.getElementById('aviso-exito').scrollIntoView({behavior:'smooth',block:'nearest'});
+
+  // Reset
+  ['p-nome','p-email','p-ofrece-centro','p-obs'].forEach(id=>document.getElementById(id).value='');
+  ['p-cuerpo','p-especialidad','p-ofrece-prov','p-busca-prov'].forEach(id=>document.getElementById(id).value='');
+  actualizarConcellos('p-ofrece-prov','p-ofrece-concello');
+  limparMs('ms-pbusca');
+  const t = document.getElementById('ms-pbusca-trigger');
+  t.textContent = '— Elige provincia primero —';
+  t.disabled = true;
+  document.getElementById('p-privacidade').checked = false;
+}
+
+// INIT
+renderCards(permutas);
+
+// =============================================
+// COORDENADAS DE CONCELLOS (principales)
+// =============================================
+const CONCELLO_COORDS = {
+  // A Coruña
+  "Coruña (A)": [43.3713, -8.3960], "Santiago de Compostela": [42.8782, -8.5448],
+  "Ferrol": [43.4851, -8.2339], "Carballo": [43.2130, -8.6910],
+  "Narón": [43.5226, -8.1836], "Oleiros": [43.3364, -8.3003],
+  "Arteixo": [43.3049, -8.5076], "Culleredo": [43.2963, -8.4076],
+  "Betanzos": [43.2808, -8.2071], "Boiro": [42.6487, -8.8826],
+  "Ribeira": [42.5541, -8.9927], "Padrón": [42.7378, -8.6603],
+  "Noia": [42.7942, -8.8879], "Arzúa": [42.9271, -8.1614],
+  "Melide": [42.9131, -8.0133], "Negreira": [42.9103, -8.7348],
+  "Santa Comba": [43.0347, -8.6609], "Cambre": [43.2951, -8.3491],
+  "Sada": [43.3544, -8.2502], "Cedeira": [43.6573, -8.0560],
+  "Ortigueira": [43.6853, -7.8557], "Muros": [42.7757, -9.0580],
+  "Cee": [42.9581, -9.1882], "Fisterra": [42.9082, -9.2633],
+  "Malpica de Bergantiños": [43.3296, -8.8127], "Ponteceso": [43.2603, -8.8946],
+  // Lugo
+  "Lugo": [43.0097, -7.5569], "Monforte de Lemos": [42.5206, -7.5136],
+  "Vilalba": [43.2980, -7.6817], "Viveiro": [43.6624, -7.5935],
+  "Burela": [43.6589, -7.3570], "Sarria": [42.7787, -7.4147],
+  "Chantada": [42.6097, -7.7733], "Foz": [43.5742, -7.2594],
+  "Ribadeo": [43.5353, -7.0414], "Barreiros": [43.5502, -7.2074],
+  "Cervo": [43.6627, -7.4088], "Mondoñedo": [43.4285, -7.3665],
+  "Guitiriz": [43.1822, -7.8932], "Outeiro de Rei": [43.1012, -7.6155],
+  "Castro de Rei": [43.2082, -7.4375], "Cospeito": [43.2330, -7.5680],
+  "Palas de Rei": [42.8720, -7.8674], "Antas de Ulla": [42.7614, -7.8953],
+  "Quiroga": [42.4793, -7.2724], "Pedrafita do Cebreiro": [42.7058, -7.0054],
+  // Ourense
+  "Ourense": [42.3359, -7.8639], "Verín": [41.9388, -7.4385],
+  "O Barco de Valdeorras": [42.4140, -6.9787], "Xinzo de Limia": [42.0624, -7.7239],
+  "Carballiño (O)": [42.4355, -8.0874], "Ribadavia": [42.2900, -8.1428],
+  "Celanova": [42.1533, -7.9560], "Bande": [42.0333, -7.9700],
+  "Allariz": [42.1883, -7.8009], "Maceda": [42.2714, -7.6456],
+  "Barbadás": [42.3107, -7.8268], "Pereiro de Aguiar (O)": [42.3537, -7.7601],
+  "San Cibrao das Viñas": [42.3038, -7.8616], "Amoeiro": [42.3700, -7.9500],
+  "Beariz": [42.4900, -8.1800], "Boborás": [42.4500, -8.1000],
+  "Carballeda de Valdeorras": [42.4500, -6.9200], "Castro Caldelas": [42.3900, -7.4200],
+  // Pontevedra
+  "Vigo": [42.2314, -8.7124], "Pontevedra": [42.4333, -8.6480],
+  "Vilagarcía de Arousa": [42.5941, -8.7641], "Redondela": [42.2847, -8.6096],
+  "Cangas": [42.2641, -8.7846], "Moaña": [42.2877, -8.7280],
+  "Marín": [42.3928, -8.6970], "Sanxenxo": [42.4012, -8.8138],
+  "Cambados": [42.5134, -8.8105], "O Grove": [42.4965, -8.8651],
+  "Caldas de Reis": [42.6035, -8.6437], "Lalín": [42.6597, -8.1123],
+  "A Estrada": [42.6859, -8.4893], "Silleda": [42.6966, -8.2407],
+  "Ponteareas": [42.1748, -8.5011], "Tui": [42.0435, -8.6450],
+  "A Guarda": [41.9038, -8.8733], "Baiona": [42.1196, -8.8510],
+  "Nigrán": [42.1591, -8.8024], "Porriño (O)": [42.1671, -8.6206],
+  "Gondomar": [42.1102, -8.7540], "Mos": [42.2104, -8.6382],
+  "Soutomaior": [42.3337, -8.5893], "Poio": [42.4404, -8.6984],
+  "Bueu": [42.3254, -8.7876], "Meaño": [42.4700, -8.7900],
+  "Meis": [42.5200, -8.7200], "Ribadumia": [42.5400, -8.7400],
+  "Vilanova de Arousa": [42.5600, -8.8300], "Illa de Arousa (A)": [42.5600, -8.8700],
+  "Ames": [42.8944, -8.6372],
+  "Barro": [42.5833, -8.6333],
+  "Cabana de Bergantiños": [43.2000, -8.8500],
+  "Camariñas": [43.1256, -9.1792],
+  "Carnota": [42.8333, -9.0833],
+  "Carral": [43.2333, -8.3500],
+  "Catoira": [42.6667, -8.7000],
+  "Corcubión": [42.9333, -9.1833],
+  "Covelo": [42.2667, -8.3167],
+  "Cuntis": [42.6333, -8.5667],
+  "Dumbría": [43.0000, -9.1000],
+  "Fonsagrada (A)": [43.1270, -7.0698],
+  "Grove (O)": [42.4965, -8.8651],
+  "Guarda (A)": [41.9038, -8.8733],
+  "Gudiña (A)": [41.9667, -7.1333],
+  "Laxe": [43.2167, -8.9833],
+  "Mazaricos": [42.9333, -8.8833],
+  "Mel": [42.5200, -8.7200],
+  "Mondariz": [42.2333, -8.4667],
+  "Muxía": [43.1039, -9.2194],
+  "Ordes": [43.0833, -8.3833],
+  "Oroso": [43.0333, -8.4167],
+  "Pobra de Trives (A)": [42.3333, -7.2500],
+  "Pontedeume": [43.4018, -8.1637],
+  "Pontenova (A)": [43.3833, -7.1167],
+  "Porto do Son": [42.6833, -8.9500],
+  "Salceda de Caselas": [42.1000, -8.5667],
+  "Tordoia": [43.0833, -8.5833],
+  "Valdeorras (O Barco)": [42.4140, -6.9787],
+  "Vilardevós": [41.9167, -7.2833],
+  "Xermade": [43.3167, -7.7833],
+  "Zas": [43.0667, -8.8333],
+  "Arbo": [42.1100, -8.3200], "Crecente": [42.1400, -8.2700],
+  "Salvaterra de Miño": [42.1000, -8.5000], "As Neves": [42.0800, -8.4200],
+  "Tomiño": [41.9900, -8.7300], "Oia": [41.9700, -8.8400],
+
+  // ── CONCELLOS AÑADIDOS (sin cobertura previa) ──
+  "Ames": [42.8944, -8.6372],
+  "Barro": [42.5833, -8.6333],
+  "Cabana de Bergantiños": [43.2000, -8.8500],
+  "Camariñas": [43.1256, -9.1792],
+  "Carnota": [42.8333, -9.0833],
+  "Carral": [43.2333, -8.3500],
+  "Catoira": [42.6667, -8.7000],
+  "Corcubión": [42.9333, -9.1833],
+  "Covelo": [42.2667, -8.3167],
+  "Cuntis": [42.6333, -8.5667],
+  "Dumbría": [43.0000, -9.1000],
+  "Fonsagrada (A)": [43.1270, -7.0698],
+  "Grove (O)": [42.4965, -8.8651],
+  "Guarda (A)": [41.9038, -8.8733],
+  "Gudiña (A)": [41.9667, -7.1333],
+  "Laxe": [43.2167, -8.9833],
+  "Mazaricos": [42.9333, -8.8833],
+  "Mel": [42.5200, -8.7200],
+  "Mondariz": [42.2333, -8.4667],
+  "Muxía": [43.1039, -9.2194],
+  "Ordes": [43.0833, -8.3833],
+  "Oroso": [43.0333, -8.4167],
+  "Pobra de Trives (A)": [42.3333, -7.2500],
+  "Pontedeume": [43.4018, -8.1637],
+  "Pontenova (A)": [43.3833, -7.1167],
+  "Porto do Son": [42.6833, -8.9500],
+  "Salceda de Caselas": [42.1000, -8.5667],
+  "Tordoia": [43.0833, -8.5833],
+  "Valdeorras (O Barco)": [42.4140, -6.9787],
+  "Vilardevós": [41.9167, -7.2833],
+  "Xermade": [43.3167, -7.7833],
+  "Zas": [43.0667, -8.8333],
+};
+
+// =============================================
+// MAPA
+// =============================================
+let mapaIniciado = false;
+let mapaObj = null;
+let marcadores = [];
+let flechas = [];   // polylines + decorators
+let permumasFiltradas = [];
+
+function initMapa() {
+  if (mapaIniciado) { filtrarMapa(); return; }
+  mapaIniciado = true;
+
+  mapaObj = L.map('mapa-contenedor', {
+    center: [42.8, -7.8],
+    zoom: 8,
+    zoomControl: true,
+  });
+
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> © <a href="https://carto.com/">CARTO</a>',
+    maxZoom: 19
+  }).addTo(mapaObj);
+
+  filtrarMapa();
+}
+
+function filtrarMapa() {
+  if (!mapaObj) return;
+
+  const esp = document.getElementById('m-especialidad').value;
+  const cuerpo = document.getElementById('m-cuerpo').value;
+
+  permumasFiltradas = permutas.filter(p => {
+    if (esp && p.especialidad !== esp) return false;
+    if (cuerpo && p.cuerpo !== cuerpo) return false;
+    return true;
+  });
+
+  // Clear existing markers and arrows
+  marcadores.forEach(m => mapaObj.removeLayer(m));
+  marcadores = [];
+  flechas.forEach(f => mapaObj.removeLayer(f));
+  flechas = [];
+
+  // Render list
+  renderListaMapa(permumasFiltradas);
+
+  // Add markers + arrows
+  permumasFiltradas.forEach(p => {
+    const coordOfrece = CONCELLO_COORDS[p.ofrece_concello];
+    if (!coordOfrece) return;
+
+    const iconHtml = `<div style="
+      background:#007bc4;color:white;border-radius:50%;
+      width:34px;height:34px;display:flex;align-items:center;justify-content:center;
+      font-weight:700;font-size:0.75rem;border:3px solid white;
+      box-shadow:0 2px 8px rgba(0,43,74,0.35);cursor:pointer;
+      font-family:'Source Sans 3',sans-serif;letter-spacing:0.5px;
+      position:relative;z-index:10;
+    ">${p.iniciais}</div>`;
+
+    const icon = L.divIcon({ html: iconHtml, className: '', iconSize: [34,34], iconAnchor: [17,17] });
+
+    const busca = p.busca_concellos.join(', ');
+    const popupHtml = `
+      <div class="popup-inner">
+        <div class="popup-nombre">${p.nome}</div>
+        <span class="popup-esp">${p.especialidad}</span>
+        <div class="popup-row"><strong>Cuerpo:</strong> ${p.cuerpo}</div>
+        <div class="popup-row"><strong>📍 Ofrece:</strong> ${p.ofrece_concello}, ${p.ofrece_prov}</div>
+        <div class="popup-row"><strong>🎯 Busca:</strong> ${busca} (${p.busca_prov})</div>
+        ${p.obs ? `<div class="popup-obs">${p.obs}</div>` : ''}
+        <button class="popup-btn" onclick="abrirModal(${p.id})">Ver detalles y contactar</button>
+      </div>`;
+
+    const marker = L.marker(coordOfrece, { icon })
+      .addTo(mapaObj)
+      .bindPopup(popupHtml, { maxWidth: 280, offset: [0, -8] });
+
+    marker.on('click', () => destacarItem(p.id));
+    marcadores.push(marker);
+
+    // Draw arrow for each destination concello
+    p.busca_concellos.forEach(destino => {
+      const coordBusca = CONCELLO_COORDS[destino];
+      if (!coordBusca) return;
+
+      // Dashed line
+      const linea = L.polyline([coordOfrece, coordBusca], {
+        color: '#002b4a',
+        weight: 1.8,
+        opacity: 0.45,
+        dashArray: '6 5',
+      }).addTo(mapaObj);
+      flechas.push(linea);
+
+      // Arrowhead at destination end
+      if (typeof L.polylineDecorator === 'function') {
+        const deco = L.polylineDecorator(linea, {
+          patterns: [{
+            offset: '100%',
+            repeat: 0,
+            symbol: L.Symbol.arrowHead({
+              pixelSize: 10,
+              polygon: false,
+              pathOptions: {
+                color: '#002b4a',
+                fillOpacity: 1,
+                weight: 2,
+                opacity: 0.65,
+              }
+            })
+          }]
+        }).addTo(mapaObj);
+        flechas.push(deco);
+      }
+
+      // Small pin at destination
+      const destIcon = L.divIcon({
+        html: `<div style="
+          width:10px;height:10px;border-radius:50%;
+          background:#002b4a;border:2px solid white;
+          box-shadow:0 1px 4px rgba(0,43,74,0.4);
+        "></div>`,
+        className: '',
+        iconSize: [10,10],
+        iconAnchor: [5,5]
+      });
+      const destMarker = L.marker(coordBusca, { icon: destIcon, interactive: false }).addTo(mapaObj);
+      flechas.push(destMarker);
+    });
+  });
+
+  // Fit bounds if markers exist
+  if (marcadores.length > 0) {
+    const group = L.featureGroup(marcadores);
+    mapaObj.fitBounds(group.getBounds().pad(0.15));
+  }
+}
+
+function renderListaMapa(lista) {
+  const cont = document.getElementById('mapa-lista');
+  const conta = document.getElementById('mapa-conta');
+  conta.innerHTML = `Mostrando <strong>${lista.length}</strong> permuta${lista.length!==1?'s':''}`;
+
+  if (lista.length === 0) {
+    cont.innerHTML = `<div class="mapa-vacio"><div class="icona">🗺️</div><p>No hay permutas para los filtros seleccionados.</p></div>`;
+    return;
+  }
+
+  cont.innerHTML = lista.map(p => `
+    <div class="mapa-resultado-item" id="mri-${p.id}" onclick="centrarMapa(${p.id})">
+      <div class="mri-nombre">${p.nome}</div>
+      <div class="mri-esp">${p.especialidad}</div>
+      <div class="mri-destinos">
+        <span>Ofrece:</span> ${p.ofrece_concello} ·
+        <span>Busca:</span> ${p.busca_concellos.slice(0,2).join(', ')}${p.busca_concellos.length>2?'…':''}
+      </div>
+    </div>
+  `).join('');
+}
+
+function centrarMapa(id) {
+  destacarItem(id);
+  const p = permumasFiltradas.find(x => x.id === id);
+  if (!p) return;
+  const coords = CONCELLO_COORDS[p.ofrece_concello];
+  if (!coords) return;
+  mapaObj.setView(coords, 11, { animate: true });
+  // Open popup for this marker
+  const idx = permumasFiltradas.filter(x => CONCELLO_COORDS[x.ofrece_concello]).findIndex(x => x.id === id);
+  if (marcadores[idx]) marcadores[idx].openPopup();
+}
+
+function destacarItem(id) {
+  document.querySelectorAll('.mapa-resultado-item').forEach(el => el.classList.remove('destacado'));
+  const el = document.getElementById('mri-'+id);
+  if (el) { el.classList.add('destacado'); el.scrollIntoView({ behavior:'smooth', block:'nearest' }); }
+}
+
+
+// =============================================
+// PERMUTA A 3
+// =============================================
+function buscarP3Personalizado() {
+  const miEsp     = document.getElementById('p3-mi-esp').value;
+  const miConc    = document.getElementById('p3-mi-concello').value;
+  const miProv    = document.getElementById('p3-mi-prov').value;
+  const buscaConcs = msEstado['ms-p3busca'] ? [...msEstado['ms-p3busca']] : [];
+
+  const aviso  = document.getElementById('p3-aviso');
+  const conta  = document.getElementById('p3-conta');
+  const grid   = document.getElementById('p3-grid');
+
+  // Validación
+  if (!miEsp || !miConc || buscaConcs.length === 0) {
+    aviso.style.display = 'block';
+    aviso.innerHTML = '⚠️ Por favor, indica tu <strong>especialidad</strong>, tu <strong>concello actual</strong> y al menos un <strong>concello destino</strong>.';
+    conta.style.display = 'none';
+    grid.innerHTML = '';
+    return;
+  }
+  aviso.style.display = 'none';
+
+  // Construir objeto "yo" virtual
+  const yo = {
+    id: 0,
+    nome: 'Tú',
+    iniciais: 'YO',
+    cor: '#c8952a',
+    cuerpo: '',
+    especialidad: miEsp,
+    ofrece_prov: miProv,
+    ofrece_concello: miConc,
+    busca_concellos: buscaConcs,
+    busca_prov: document.getElementById('p3-busca-prov').value,
+    obs: 'Tu posición',
+  };
+
+  // Filtrar bolsa por misma especialidad
+  const bolsa = permutas.filter(p => p.especialidad === miEsp);
+
+  // Buscar cadenas donde YO sea uno de los tres eslabones
+  // Patrón: YO → B → C → YO
+  //   B ofrece lo que YO busca
+  //   C ofrece lo que B busca
+  //   YO ofrece lo que C busca
+
+  const cadeas = [];
+  const seen = new Set();
+
+  for (const b of bolsa) {
+    // B debe ofrecer algo que YO busca
+    if (!yo.busca_concellos.includes(b.ofrece_concello)) continue;
+
+    for (const c of bolsa) {
+      if (c.id === b.id) continue;
+      // C debe ofrecer algo que B busca
+      if (!b.busca_concellos.includes(c.ofrece_concello)) continue;
+      // C debe buscar lo que YO ofrece
+      if (!c.busca_concellos.includes(yo.ofrece_concello)) continue;
+
+      const key = [b.id, c.id].sort((x,y)=>x-y).join('-');
+      if (seen.has(key)) continue;
+      seen.add(key);
+      cadeas.push([yo, b, c]);
+    }
+  }
+
+  conta.style.display = 'block';
+  conta.innerHTML = cadeas.length > 0
+    ? `✅ Se encontraron <strong>${cadeas.length}</strong> cadena${cadeas.length !== 1 ? 's' : ''} de permuta a 3 en las que puedes encajar`
+    : '';
+
+  if (cadeas.length === 0) {
+    grid.innerHTML = `<div class="p3-vacio"><div class="icona">🔗</div>
+      <p>No se encontró ninguna cadena de permuta a 3 para tu situación.</p>
+      <p style="font-size:0.85rem;margin-top:0.5rem;opacity:0.7">Prueba añadiendo más concellos destino o espera a que se publiquen nuevas permutas.</p>
+    </div>`;
+    return;
+  }
+
+  grid.innerHTML = cadeas.map(([a, b, c], idx) => `
+    <div class="p3-card">
+      <div class="p3-cabeceira">
+        <span class="p3-num">Cadena #${idx+1}</span>
+        <span class="p3-badge">${a.especialidad}</span>
+      </div>
+      <div class="p3-cadea">
+        ${renderEslabón(a, b, false, true)}
+        ${renderEslabón(b, c)}
+        ${renderEslabón(c, a, true)}
+      </div>
+      <div class="p3-cierre">
+        <span class="p3-cierre-icona">✓</span>
+        <span class="p3-cierre-texto">Cadena cerrada — los 3 se mueven a la vez</span>
+      </div>
+      <div class="p3-footer">
+        <button class="btn-p3-contactar" style="background:var(--azul);color:white;border-color:var(--azul);" disabled>Eres tú · ${a.ofrece_concello}</button>
+        <button class="btn-p3-contactar" onclick="abrirModal(${b.id})">Contactar ${b.iniciais}</button>
+        <button class="btn-p3-contactar" onclick="abrirModal(${c.id})">Contactar ${c.iniciais}</button>
+      </div>
+    </div>`
+  ).join('');
+}
+
+function renderP3() {
+  // Called on tab open — just reset if empty
+  document.getElementById('p3-aviso').style.display = 'none';
+  document.getElementById('p3-conta').style.display = 'none';
+  document.getElementById('p3-grid').innerHTML = '';
+}
+
+function renderEslabón(desde, hacia, ultimo=false, esYo=false) {
+  const nomeBadge = esYo
+    ? `<span style="background:#c8952a;color:white;font-size:0.68rem;font-weight:700;padding:0.15rem 0.45rem;border-radius:2px;margin-left:0.4rem;vertical-align:middle;">TÚ</span>`
+    : '';
+  return `
+  <div class="p3-eslabón">
+    <div class="p3-eslabón-liña">
+      <div class="p3-dot" style="${esYo ? 'background:#c8952a;box-shadow:0 0 0 2px rgba(200,149,42,0.3);' : ''}"></div>
+      ${!ultimo ? '<div class="p3-line"></div><div class="p3-arrow-down"></div>' : ''}
+    </div>
+    <div class="p3-eslabón-info">
+      <div class="p3-eslabón-nome">${desde.nome} ${nomeBadge}· ${desde.especialidad}</div>
+      <div class="p3-eslabón-ofrece">
+        Ofrece: <span class="lugar">${desde.ofrece_concello}</span>
+        <span style="color:var(--texto-suave)"> (${desde.ofrece_prov})</span>
+      </div>
+      <div class="p3-eslabón-busca">
+        → Se va a: <strong>${hacia.ofrece_concello}</strong> (${hacia.ofrece_prov})
+      </div>
+    </div>
+  </div>`;
+}
+
+
+// =============================================
+// ESPECIALIDADES DINÁMICAS POR CUERPO
+// =============================================
+const ESPECIALIDADES_POR_CUERPO = {"Maestros (590)": ["Primaria (generalista)", "Educación Infantil", "Inglés (primaria)", "Música", "Ed. Física (primaria)", "Pedagogía Terapéutica (PT)", "Audición e Linguaxe", "Orientación (primaria)"], "Secundaria (590)": ["Matemáticas", "Lengua Castellana y Literatura", "Inglés", "Francés", "Historia y Geografía", "Biología y Geología", "Física y Química", "Tecnología", "Música", "Educación Plástica y Visual", "Filosofía", "Educación Física", "Orientación (secundaria)", "Galego", "Economía", "Latín", "Griego", "Dibujo", "Religión"], "FP (591)": ["Administración y Gestión", "Comercio y Marketing", "Electricidad", "Electrónica", "Hostelería", "Imagen Personal", "Informática", "Instalaciones", "Madera", "Mecánica", "Sanitaria", "Servicios Socioculturales"], "Idiomas (592)": ["Inglés (EOI)", "Francés (EOI)", "Alemán (EOI)", "Portugués (EOI)", "Italiano (EOI)"], "Artes Plásticas (593)": ["Dibujo Artístico", "Volumen", "Historia del Arte", "Diseño"], "Música y Danza (594)": ["Instrumento", "Lenguaje Musical", "Danza"], "Inspección": ["Inspección Educativa"]};
+
+function actualizarEspecialidades(cuerpoId, espId) {
+  const cuerpo = document.getElementById(cuerpoId).value;
+  const sel = document.getElementById(espId);
+  sel.innerHTML = '<option value="">Selecciona especialidad…</option>';
+  sel.disabled = !cuerpo;
+  if (!cuerpo) return;
+  const lista = ESPECIALIDADES_POR_CUERPO[cuerpo] || [];
+  lista.forEach(e => {
+    const o = document.createElement('option');
+    o.value = e; o.textContent = e;
+    sel.appendChild(o);
+  });
+}
+
+
+function abrirPrivacidad() {
+  document.getElementById('modal-privacidad').classList.add('mostrar');
+  document.body.style.overflow = 'hidden';
+}
+
+function cerrarPrivacidad(e) {
+  if (!e || e.target === document.getElementById('modal-privacidad')) {
+    document.getElementById('modal-privacidad').classList.remove('mostrar');
+    document.body.style.overflow = '';
+  }
+}
+</script>
+
+<!-- MODAL POLÍTICA DE PRIVACIDAD -->
+<div class="modal-privacidad" id="modal-privacidad" onclick="cerrarPrivacidad(event)">
+  <div class="modal-privacidad-inner">
+    <div class="modal-priv-cabeceira">
+      <h2>Política de Privacidad — PermuGal</h2>
+      <button class="modal-priv-cerrar" onclick="cerrarPrivacidad()">✕</button>
+    </div>
+    <div class="modal-priv-contenido">
+
+      <h3>1. Responsable del tratamiento</h3>
+      <p>El responsable del tratamiento de los datos recogidos a través de este sitio web es el titular del proyecto <strong>PermuGal</strong>, contactable a través de la dirección de correo electrónico: <a href="mailto:maestroarmero77@gmail.com">maestroarmero77@gmail.com</a>.</p>
+      <p>PermuGal es un proyecto sin ánimo de lucro creado para facilitar la búsqueda de permutas entre docentes de Galicia. No está vinculado ni es representativo de ninguna administración educativa.</p>
+
+      <h3>2. Datos que se recogen</h3>
+      <p>Al publicar una permuta, el usuario facilita voluntariamente los siguientes datos:</p>
+      <ul>
+        <li>Nombre y apellidos</li>
+        <li>Dirección de correo electrónico</li>
+        <li>Centro educativo de destino actual</li>
+        <li>Provincia y concello de origen y destino deseado</li>
+        <li>Cuerpo y especialidad docente</li>
+        <li>Observaciones opcionales</li>
+      </ul>
+      <p>Al usar el formulario de contacto, se recogen nombre, correo electrónico y mensaje, que se transmiten directamente al docente destinatario mediante el cliente de correo del usuario. <strong>PermuGal no almacena ni tiene acceso a estos mensajes.</strong></p>
+
+      <h3>3. Finalidad del tratamiento</h3>
+      <p>Los datos se utilizan exclusivamente para:</p>
+      <ul>
+        <li>Publicar la oferta de permuta en el buscador, visible para otros usuarios del sitio</li>
+        <li>Facilitar el contacto directo entre docentes interesados en permutar</li>
+      </ul>
+      <p>Los datos <strong>no se utilizan</strong> para fines comerciales, publicitarios ni se ceden a terceros.</p>
+
+      <h3>4. Legitimación</h3>
+      <p>La base legal del tratamiento es el <strong>consentimiento expreso</strong> del usuario, prestado mediante la marcación del checkbox antes de publicar su oferta (art. 6.1.a del RGPD).</p>
+
+      <h3>5. Almacenamiento de los datos</h3>
+      <p>En su versión actual, los datos publicados se almacenan únicamente en el navegador del usuario durante la sesión y no se envían a ningún servidor externo. El sitio web está alojado en <strong>GitHub Pages</strong> (GitHub Inc., subsidiaria de Microsoft), cuya política de privacidad puede consultarse en <a href="https://docs.github.com/es/site-policy/privacy-policies/github-general-privacy-statement" target="_blank">docs.github.com</a>.</p>
+      <p>Si en el futuro se implementa una base de datos (Firebase u otro servicio), esta política se actualizará indicando el nuevo tratamiento y se solicitará nuevo consentimiento.</p>
+
+      <h3>6. Conservación de los datos</h3>
+      <p>Los datos publicados permanecerán visibles hasta que el usuario solicite su eliminación enviando un correo a <a href="mailto:maestroarmero77@gmail.com">maestroarmero77@gmail.com</a>. Se atenderá la solicitud en un plazo máximo de <strong>72 horas</strong>.</p>
+
+      <h3>7. Derechos del usuario</h3>
+      <p>De acuerdo con el RGPD (UE) 2016/679 y la LOPDGDD, el usuario tiene derecho a:</p>
+      <ul>
+        <li><strong>Acceso:</strong> conocer qué datos suyos están publicados</li>
+        <li><strong>Rectificación:</strong> corregir datos inexactos</li>
+        <li><strong>Supresión:</strong> solicitar la eliminación de sus datos</li>
+        <li><strong>Oposición:</strong> oponerse al tratamiento de sus datos</li>
+        <li><strong>Portabilidad:</strong> recibir sus datos en formato estructurado</li>
+        <li><strong>Limitación:</strong> solicitar que se restrinja el tratamiento</li>
+      </ul>
+      <p>Para ejercer cualquiera de estos derechos, contacta con <a href="mailto:maestroarmero77@gmail.com">maestroarmero77@gmail.com</a>.</p>
+
+      <h3>8. Medidas de seguridad</h3>
+      <p>El sitio utiliza conexión <strong>HTTPS</strong> para cifrar la comunicación. No se almacenan contraseñas ni datos bancarios. El correo electrónico del docente solo se muestra si este tiene uno registrado y únicamente en el momento de iniciar contacto.</p>
+
+      <h3>9. Menores de edad</h3>
+      <p>Este sitio está dirigido exclusivamente a docentes en ejercicio. No se recogen datos de menores de 14 años. Si detectas algún uso indebido, comunícalo a <a href="mailto:maestroarmero77@gmail.com">maestroarmero77@gmail.com</a>.</p>
+
+      <h3>10. Modificaciones</h3>
+      <p>Esta política puede actualizarse en cualquier momento. La fecha de última actualización es: <strong>Mayo 2025</strong>. Se recomienda consultarla periódicamente.</p>
+
+    </div>
+    <div class="modal-priv-pe">
+      <button class="btn-primario" onclick="cerrarPrivacidad()">Entendido</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
