@@ -2094,10 +2094,6 @@ footer a:hover { color: var(--blanco); }
         <div class="user-avatar" id="user-avatar-pill">?</div>
         <span class="user-name" id="user-name-pill">Usuario</span>
         <div class="user-menu" id="user-menu">
-          <button class="user-menu-item" onclick="switchTab('dashboard');toggleUserMenu()">👤 Mi área</button>
-          <button class="user-menu-item" onclick="switchTab('mensajes');toggleUserMenu()">
-            💬 Mensajes <span class="badge-unread" id="badge-unread-menu">0</span>
-          </button>
           <div class="user-menu-divider"></div>
           <button class="user-menu-item peligro" onclick="cerrarSesion()">↩ Cerrar sesión</button>
         </div>
@@ -2130,8 +2126,6 @@ footer a:hover { color: var(--blanco); }
     <button class="tab" onclick="switchTab('mapa')">Buscar en mapa</button>
     <button class="tab" onclick="switchTab('p3')">🔗 Permutas a 3</button>
     <button class="tab tab-publicar" onclick="switchTab('publicar')">✏️ Publicar mi permuta</button>
-    <button class="tab tab-auth-only" id="tab-dashboard" onclick="switchTab('dashboard')" style="display:none;">👤 Mi área</button>
-    <button class="tab tab-auth-only" id="tab-mensajes" onclick="switchTab('mensajes')" style="display:none;">💬 Mensajes <span class="badge-unread" id="badge-unread-tab">0</span></button>
   </div>
 
   <!-- PANEL BUSCAR -->
@@ -2393,94 +2387,6 @@ footer a:hover { color: var(--blanco); }
     </div>
   </div>
 
-  <!-- PANEL DASHBOARD -->
-  <div id="panel-dashboard" class="panel">
-    <div class="dashboard-layout">
-      <div class="dash-sidebar">
-        <div class="dash-sidebar-header">
-          <div class="dash-user-avatar-big" id="dash-avatar-big">?</div>
-          <div class="dash-user-name" id="dash-user-name">Cargando…</div>
-          <div class="dash-user-email" id="dash-user-email"></div>
-        </div>
-        <div class="dash-nav">
-          <button class="dash-nav-item active" onclick="dashSection('mis-permutas')">📋 Mis permutas</button>
-          <button class="dash-nav-item" onclick="dashSection('estadisticas')">📊 Estadísticas</button>
-          <button class="dash-nav-item" onclick="dashSection('configuracion')">⚙️ Configuración</button>
-        </div>
-      </div>
-      <div class="dash-content" id="dash-content">
-        <div class="dash-section active" id="dash-mis-permutas">
-          <div class="dash-card">
-            <div class="dash-card-titulo">Mis permutas publicadas</div>
-            <div id="mis-permutas-lista"><p style="color:var(--texto-suave);font-size:0.9rem;">Cargando…</p></div>
-            <button class="btn-primario" onclick="switchTab('publicar')" style="margin-top:1rem;width:100%;justify-content:center;">+ Publicar nueva permuta</button>
-          </div>
-        </div>
-        <div class="dash-section" id="dash-estadisticas">
-          <div class="dash-card">
-            <div class="dash-card-titulo">Resumen de actividad</div>
-            <div class="stats-grid">
-              <div class="stat-card"><span class="stat-card-num" id="stat-permutas">0</span><span class="stat-card-label">Mis permutas</span></div>
-              <div class="stat-card"><span class="stat-card-num" id="stat-matches">0</span><span class="stat-card-label">Coincidencias</span></div>
-              <div class="stat-card"><span class="stat-card-num" id="stat-mensajes">0</span><span class="stat-card-label">Mensajes</span></div>
-            </div>
-          </div>
-        </div>
-        <div class="dash-section" id="dash-configuracion">
-          <div class="dash-card">
-            <div class="dash-card-titulo">Configuración de perfil</div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
-              <div class="campo"><span class="etiqueta">Nombre o alias</span><input type="text" id="conf-nombre" placeholder="Tu nombre"></div>
-              <div class="campo"><span class="etiqueta">Teléfono <span class="etiqueta-sub">(opcional)</span></span><input type="text" id="conf-telefono" placeholder="Para contacto"></div>
-            </div>
-            <button class="btn-primario" onclick="guardarConfiguracion()" style="margin-top:1rem;">Guardar cambios</button>
-            <div id="conf-ok" style="display:none;margin-top:0.75rem;color:var(--azul);font-size:0.85rem;font-weight:600;">✓ Cambios guardados</div>
-          </div>
-          <div class="dash-card">
-            <div class="dash-card-titulo">Cuenta</div>
-            <p style="font-size:0.88rem;color:var(--texto-suave);margin-bottom:1rem;">Email: <strong id="conf-email-show"></strong></p>
-            <button class="btn-secundario" onclick="cerrarSesion()" style="border-color:#c53030;color:#c53030;">↩ Cerrar sesión</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- PANEL MENSAJES -->
-  <div id="panel-mensajes" class="panel">
-    <div id="mensajes-no-auth" class="no-logueado-msg" style="display:none;">
-      <div class="icona">💬</div>
-      <p>Inicia sesión para ver y enviar mensajes.</p>
-      <button class="btn-primario" onclick="abrirAuth('login')">Iniciar sesión</button>
-    </div>
-    <div id="mensajes-auth" style="display:none;">
-      <div class="chat-layout">
-        <div class="chat-lista">
-          <div class="chat-lista-header">Conversaciones</div>
-          <div class="chat-lista-scroll" id="chat-lista-scroll">
-            <div style="padding:1.5rem;text-align:center;color:var(--texto-suave);font-size:0.85rem;">No tienes conversaciones aún.</div>
-          </div>
-        </div>
-        <div class="chat-ventana" id="chat-ventana">
-          <div class="chat-vacio" id="chat-vacio"><div class="icona">💬</div><p style="font-size:0.9rem;">Selecciona una conversación</p></div>
-          <div id="chat-activo" style="display:none;flex-direction:column;height:100%;">
-            <div class="chat-ventana-header">
-              <div class="conv-avatar" id="chat-header-avatar">?</div>
-              <div class="chat-header-info">
-                <div class="conv-nombre" id="chat-header-nombre">–</div>
-                <div class="chat-header-permuta" id="chat-header-permuta">–</div>
-              </div>
-            </div>
-            <div class="chat-mensajes" id="chat-mensajes"></div>
-            <div class="chat-input-area">
-              <textarea class="chat-input" id="chat-input" placeholder="Escribe un mensaje…" rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();enviarMensaje();}"></textarea>
-              <button class="chat-send-btn" onclick="enviarMensaje()" id="chat-send-btn">➤</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
 
 </main>
 
@@ -2839,7 +2745,7 @@ function renderCards(lista) {
       </div>
       ${p.obs ? `<div class="tp-obs">${p.obs.substring(0,95)}${p.obs.length>95?'…':''}</div>` : ''}
       <div class="tp-pe">
-        <span class="tp-data">${p._cloud ? '<span class="tp-cloud-dot"></span>' : ''}Publicado ${p.fecha}</span>
+        <span class="tp-data">${p._cloud ? '<span class="tp-cloud-dot"></span>' : ''}${p.fecha}</span>
         <button class="btn-contactar" onclick="event.stopPropagation();abrirModal('${p.id}')">Contactar</button>
       </div>
     </div>`;
@@ -2970,7 +2876,7 @@ function enviarInteres() { enviarContactoInterno(); }
 // TABS
 // =============================================
 function switchTab(tab) {
-  const allTabs = ['buscar','mapa','p3','publicar','dashboard','mensajes'];
+  const allTabs = ['buscar','mapa','p3','publicar'];
   document.querySelectorAll('.tab').forEach(t => {
     const onclick = t.getAttribute('onclick') || '';
     const isActive = onclick.includes("'" + tab + "'") || onclick.includes('"' + tab + '"');
@@ -2982,18 +2888,6 @@ function switchTab(tab) {
   });
   if (tab === 'mapa') initMapa();
   if (tab === 'p3') renderP3();
-  if (tab === 'mensajes') {
-    const user = window._currentUser;
-    const authDiv = document.getElementById('mensajes-auth');
-    const noAuthDiv = document.getElementById('mensajes-no-auth');
-    if (authDiv && noAuthDiv) {
-      authDiv.style.display = user ? 'block' : 'none';
-      noAuthDiv.style.display = user ? 'none' : 'block';
-    }
-  }
-  if (tab === 'dashboard') {
-    if (!window._currentUser) { switchTab('buscar'); abrirAuth('login'); }
-  }
   // Close user menu if open
   const menu = document.getElementById('user-menu');
   if (menu) menu.classList.remove('visible');
@@ -3036,7 +2930,8 @@ function publicar() {
     ofrece_centro: document.getElementById('p-ofrece-centro').value || '',
     busca_prov: buProv, busca_concellos: buConcs,
     obs: document.getElementById('p-obs').value,
-    email, fecha: 'hace un momento',
+    email,
+    fecha: new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }),
     _cloud: true
   };
 
@@ -3819,7 +3714,7 @@ function renderEslabón(desde, hacia, ultimo=false, esYo=false) {
 // =============================================
 // ESPECIALIDADES DINÁMICAS POR CUERPO
 // =============================================
-const ESPECIALIDADES_POR_CUERPO = {"Maestros (590)": ["Primaria (generalista)", "Educación Infantil", "Inglés (primaria)", "Música", "Ed. Física (primaria)", "Pedagogía Terapéutica (PT)", "Audición e Linguaxe", "Orientación (primaria)"], "Secundaria (590)": ["Matemáticas", "Lengua Castellana y Literatura", "Inglés", "Francés", "Historia y Geografía", "Biología y Geología", "Física y Química", "Tecnología", "Música", "Educación Plástica y Visual", "Filosofía", "Educación Física", "Orientación (secundaria)", "Galego", "Economía", "Latín", "Griego", "Dibujo", "Religión"], "FP (591)": ["Administración y Gestión", "Comercio y Marketing", "Electricidad", "Electrónica", "Hostelería", "Imagen Personal", "Informática", "Instalaciones", "Madera", "Mecánica", "Sanitaria", "Servicios Socioculturales"], "Idiomas (592)": ["Inglés (EOI)", "Francés (EOI)", "Alemán (EOI)", "Portugués (EOI)", "Italiano (EOI)"], "Artes Plásticas (593)": ["Dibujo Artístico", "Volumen", "Historia del Arte", "Diseño"], "Música y Danza (594)": ["Instrumento", "Lenguaje Musical", "Danza"], "Inspección": ["Inspección Educativa"]};
+const ESPECIALIDADES_POR_CUERPO = {"Maestros (590)": ["Primaria (generalista)", "Educación Infantil", "Inglés (primaria)", "Francés (primaria)", "Música", "Ed. Física (primaria)", "Pedagogía Terapéutica (PT)", "Audición e Linguaxe", "Orientación (primaria)"], "Secundaria (590)": ["Matemáticas", "Lengua Castellana y Literatura", "Inglés", "Francés", "Historia y Geografía", "Biología y Geología", "Física y Química", "Tecnología", "Música", "Educación Plástica y Visual", "Filosofía", "Educación Física", "Orientación (secundaria)", "Galego", "Economía", "Latín", "Griego", "Dibujo", "Religión"], "FP (591)": ["Administración y Gestión", "Comercio y Marketing", "Electricidad", "Electrónica", "Hostelería", "Imagen Personal", "Informática", "Instalaciones", "Madera", "Mecánica", "Sanitaria", "Servicios Socioculturales"], "Idiomas (592)": ["Inglés (EOI)", "Francés (EOI)", "Alemán (EOI)", "Portugués (EOI)", "Italiano (EOI)"], "Artes Plásticas (593)": ["Dibujo Artístico", "Volumen", "Historia del Arte", "Diseño"], "Música y Danza (594)": ["Instrumento", "Lenguaje Musical", "Danza"], "Inspección": ["Inspección Educativa"]};
 
 function actualizarEspecialidades(cuerpoId, espId) {
   const cuerpo = document.getElementById(cuerpoId).value;
