@@ -2010,6 +2010,69 @@ footer a:hover { color: var(--blanco); }
 }
 .badge-unread.visible { display: inline-block; }
 
+
+/* ── MODAL PRIVACIDAD ─────────────────────── */
+.modal-privacidad {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,43,74,0.6);
+  z-index: 600;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  backdrop-filter: blur(2px);
+}
+.modal-privacidad.mostrar { display: flex; animation: aparecer 0.2s ease; }
+
+.modal-privacidad-inner {
+  background: var(--blanco);
+  border-radius: 2px;
+  border-top: 4px solid var(--azul);
+  max-width: 680px;
+  width: 100%;
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0,43,74,0.3);
+}
+
+.modal-priv-cabeceira {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--borde);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
+.modal-priv-cabeceira h2 { font-size: 1.05rem; font-weight: 700; color: var(--azul-oscuro); }
+.modal-priv-cerrar { background: none; border: none; font-size: 1.3rem; color: var(--texto-suave); cursor: pointer; }
+.modal-priv-cerrar:hover { color: var(--azul); }
+
+.modal-priv-contenido {
+  overflow-y: auto;
+  padding: 1.5rem;
+  font-size: 0.88rem;
+  line-height: 1.7;
+  color: var(--texto);
+}
+.modal-priv-contenido h3 {
+  font-size: 0.82rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 1px; color: var(--azul); margin: 1.25rem 0 0.5rem;
+  padding-bottom: 0.3rem; border-bottom: 1px solid var(--borde);
+}
+.modal-priv-contenido h3:first-child { margin-top: 0; }
+.modal-priv-contenido p { margin-bottom: 0.6rem; }
+.modal-priv-contenido a { color: var(--azul); }
+
+.modal-priv-pe {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--borde);
+  display: flex;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+
 </style>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
